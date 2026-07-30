@@ -401,14 +401,22 @@
         overflow-y: auto;
       }
 
+      /*
+       * Mobilnie podgląd pozostaje przyklejony u góry ekranu,
+       * a panel konfiguracji przewija się pod nim. Dzięki temu model
+       * jest widoczny podczas zmiany wszystkich opcji.
+       */
       #app {
-        position: relative;
+        position: -webkit-sticky;
+        position: sticky;
         inset: auto;
+        top: 0;
+        z-index: 20;
         width: 100%;
-        height: 58svh;
-        min-height: 360px;
-        max-height: 520px;
+        height: clamp(300px, 46svh, 430px);
         overflow: hidden;
+        background: #eef1f4;
+        box-shadow: 0 12px 30px rgba(26, 30, 35, 0.10);
       }
 
       #app canvas {
@@ -418,6 +426,7 @@
 
       .config-panel {
         position: relative;
+        z-index: 10;
         top: auto;
         left: auto;
         width: calc(100% - 24px);
@@ -615,6 +624,6 @@
     </span>
   </aside>
 
-  <script type="module" src="./main.js?v=20260730-mobile-panel"></script>
+  <script type="module" src="./main.js?v=20260730-mobile-sticky"></script>
 </body>
 </html>
