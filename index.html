@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Biurko 3D</title>
+
+  <style>
+    :root {
+      --panel-width: 280px;
+      --ink: #1c2025;
+      --line: rgba(26, 31, 37, 0.08);
+      --surface: rgba(255, 255, 255, 0.90);
+      --surface-soft: rgba(247, 247, 245, 0.94);
+      --accent: #2f8f5b;
+      --accent-soft: #e5f4eb;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #eef1f4;
+    }
+
+    body {
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
+      color: var(--ink);
+    }
+
+    #app {
+      position: fixed;
+      inset: 0;
+    }
+
+    canvas {
+      display: block;
+      touch-action: none;
+    }
+
+    .config-panel {
+      position: fixed;
+      z-index: 30;
+      top: 18px;
+      left: 18px;
+      width: var(--panel-width);
+      max-height: calc(100vh - 36px);
+      overflow-y: auto;
+      padding: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.78);
+      border-radius: 20px;
+      background: var(--surface);
+      box-shadow:
+        0 24px 70px rgba(26, 30, 35, 0.15),
+        0 4px 16px rgba(26, 30, 35, 0.06);
+      backdrop-filter: blur(18px) saturate(125%);
+      -webkit-backdrop-filter: blur(18px) saturate(125%);
+    }
+
+    .panel-title {
+      margin: 0 0 14px;
+      font-size: 18px;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+    }
+
+    .size-options {
+      display: grid;
+      gap: 9px;
+    }
+
+    .config-section + .config-section {
+      margin-top: 20px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+    }
+
+    .side-options,
+    .finish-options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+    }
+
+    .finish-options {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: stretch;
+    }
+
+    .size-option,
+    .side-option {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 12px;
+      min-height: 58px;
+      padding: 11px 12px 11px 14px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: var(--surface-soft);
+      color: var(--ink);
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+      transition:
+        transform 160ms ease,
+        border-color 160ms ease,
+        background 160ms ease,
+        box-shadow 160ms ease;
+    }
+
+    .size-option:hover,
+    .side-option:hover {
+      transform: translateY(-1px);
+      border-color: rgba(47, 143, 91, 0.34);
+      box-shadow: 0 8px 18px rgba(29, 33, 38, 0.07);
+    }
+
+    .size-option.is-active,
+    .side-option.is-active {
+      border-color: rgba(47, 143, 91, 0.58);
+      background: linear-gradient(145deg, #f9fffb, var(--accent-soft));
+      box-shadow: inset 0 0 0 1px rgba(47, 143, 91, 0.10);
+    }
+
+    .size-main {
+      display: block;
+      font-size: 14px;
+      font-weight: 760;
+      letter-spacing: -0.01em;
+    }
+
+    .size-extra {
+      display: block;
+      margin-top: 3px;
+      color: #28784d;
+      font-size: 11.5px;
+      font-weight: 700;
+    }
+
+    .option-check {
+      position: relative;
+      width: 22px;
+      height: 22px;
+      border: 1.5px solid rgba(35, 39, 44, 0.22);
+      border-radius: 50%;
+      background: #fff;
+      transition: 160ms ease;
+    }
+
+    .size-option.is-active .option-check,
+    .side-option.is-active .option-check {
+      border-color: var(--accent);
+      background: var(--accent);
+      box-shadow: 0 0 0 4px rgba(47, 143, 91, 0.12);
+    }
+
+    .size-option.is-active .option-check::after,
+    .side-option.is-active .option-check::after {
+      content: "";
+      position: absolute;
+      left: 6px;
+      top: 3px;
+      width: 6px;
+      height: 10px;
+      border: solid #fff;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+
+
+    .finish-option {
+      width: 100%;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: var(--surface-soft);
+      color: var(--ink);
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+      transition:
+        transform 160ms ease,
+        border-color 160ms ease,
+        background 160ms ease,
+        box-shadow 160ms ease;
+    }
+
+    .finish-option:hover {
+      transform: translateY(-1px);
+      border-color: rgba(47, 143, 91, 0.34);
+      box-shadow: 0 8px 18px rgba(29, 33, 38, 0.07);
+    }
+
+    .finish-option.is-active {
+      border-color: rgba(47, 143, 91, 0.58);
+      background: linear-gradient(145deg, #f9fffb, var(--accent-soft));
+      box-shadow: inset 0 0 0 1px rgba(47, 143, 91, 0.10);
+    }
+
+    .finish-preview {
+      display: block;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      margin-bottom: 8px;
+      border-radius: 9px;
+      background-position: center;
+      background-size: cover;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.10);
+    }
+
+    .finish-label {
+      display: flex;
+      margin-top: auto;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 750;
+      line-height: 1.2;
+    }
+
+    .finish-check {
+      position: relative;
+      width: 16px;
+      height: 16px;
+      flex: 0 0 16px;
+      border: 1.5px solid rgba(35, 39, 44, 0.22);
+      border-radius: 50%;
+      background: #fff;
+    }
+
+    .finish-option.is-active .finish-check {
+      border-color: var(--accent);
+      background: var(--accent);
+      box-shadow: 0 0 0 3px rgba(47, 143, 91, 0.12);
+    }
+
+    .finish-option.is-active .finish-check::after {
+      content: "";
+      position: absolute;
+      left: 4px;
+      top: 1px;
+      width: 4px;
+      height: 8px;
+      border: solid #fff;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+
+
+    .price-card {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 30;
+      min-width: 286px;
+      display: flex;
+      align-items: flex-end;
+      gap: 14px;
+      padding: 14px 18px 14px 14px;
+      border: 1px solid rgba(255, 255, 255, 0.78);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.90);
+      box-shadow:
+        0 20px 55px rgba(26, 30, 35, 0.13),
+        0 4px 14px rgba(26, 30, 35, 0.05);
+      backdrop-filter: blur(18px) saturate(125%);
+      -webkit-backdrop-filter: blur(18px) saturate(125%);
+    }
+
+    .price-content {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .pdf-offer-button {
+      position: relative;
+      width: 46px;
+      height: 46px;
+      flex: 0 0 46px;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      border: 1px solid rgba(47, 143, 91, 0.22);
+      border-radius: 13px;
+      background: linear-gradient(145deg, #f9fffb, #e5f4eb);
+      color: #28784d;
+      cursor: pointer;
+      transition:
+        transform 160ms ease,
+        border-color 160ms ease,
+        box-shadow 160ms ease,
+        background 160ms ease;
+    }
+
+    .pdf-offer-button:hover,
+    .pdf-offer-button:focus-visible {
+      transform: translateY(-1px);
+      border-color: rgba(47, 143, 91, 0.55);
+      box-shadow: 0 9px 22px rgba(37, 102, 68, 0.16);
+      outline: none;
+    }
+
+    .pdf-offer-button svg {
+      width: 23px;
+      height: 23px;
+      stroke: currentColor;
+    }
+
+    .pdf-offer-button.is-loading {
+      pointer-events: none;
+      color: transparent;
+    }
+
+    .pdf-offer-button.is-loading::after {
+      content: "";
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(47, 143, 91, 0.22);
+      border-top-color: #2f8f5b;
+      border-radius: 50%;
+      animation: pdf-spin 700ms linear infinite;
+    }
+
+    .pdf-tooltip {
+      position: absolute;
+      left: 0;
+      bottom: calc(100% + 10px);
+      z-index: 40;
+      padding: 8px 10px;
+      border-radius: 9px;
+      background: #202429;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1;
+      white-space: nowrap;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(4px);
+      pointer-events: none;
+      transition: opacity 140ms ease, transform 140ms ease, visibility 140ms ease;
+    }
+
+    .pdf-tooltip::after {
+      content: "";
+      position: absolute;
+      left: 17px;
+      top: 100%;
+      border: 6px solid transparent;
+      border-top-color: #202429;
+    }
+
+    .pdf-offer-button:hover .pdf-tooltip,
+    .pdf-offer-button:focus-visible .pdf-tooltip {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    @keyframes pdf-spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .price-label {
+      display: block;
+      margin-bottom: 5px;
+      color: #777e86;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .price-base {
+      display: block;
+      font-size: 20px;
+      font-weight: 780;
+      line-height: 1.2;
+      letter-spacing: -0.025em;
+    }
+
+    @media (max-width: 760px) {
+      :root { --panel-width: min(280px, calc(100vw - 24px)); }
+
+      .config-panel {
+        top: 12px;
+        left: 12px;
+        padding: 16px;
+        border-radius: 17px;
+      }
+
+      .size-option,
+      .side-option { min-height: 52px; }
+
+      .price-card {
+        right: 12px;
+        bottom: 12px;
+        min-width: 220px;
+        padding: 14px 16px;
+        border-radius: 16px;
+      }
+    }
+  </style>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.166.1/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.166.1/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+
+  <aside class="config-panel" aria-label="Konfiguracja biurka">
+    <section class="config-section" aria-labelledby="size-title">
+      <h2 class="panel-title" id="size-title">Rozmiar</h2>
+      <div class="size-options" role="radiogroup" aria-label="Rozmiar biurka">
+        <button class="size-option is-active" type="button" data-width="140" role="radio" aria-checked="true">
+          <span>
+            <span class="size-main">140 × 80 × 74 cm</span>
+          </span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+
+        <button class="size-option" type="button" data-width="160" role="radio" aria-checked="false">
+          <span>
+            <span class="size-main">160 × 80 × 74 cm</span>
+            <span class="size-extra">+ 64,82 zł</span>
+          </span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+
+        <button class="size-option" type="button" data-width="180" role="radio" aria-checked="false">
+          <span>
+            <span class="size-main">180 × 80 × 74 cm</span>
+            <span class="size-extra">+ 127,55 zł</span>
+          </span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+      </div>
+    </section>
+
+    <section class="config-section" aria-labelledby="helper-side-title">
+      <h2 class="panel-title" id="helper-side-title">Pomocnik – strona</h2>
+      <div class="side-options" role="radiogroup" aria-label="Strona pomocnika">
+        <button class="side-option is-active" type="button" data-side="left" role="radio" aria-checked="true">
+          <span class="size-main">Lewa</span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+
+        <button class="side-option" type="button" data-side="right" role="radio" aria-checked="false">
+          <span class="size-main">Prawa</span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+      </div>
+    </section>
+
+    <section class="config-section" aria-labelledby="top-band-title">
+      <h2 class="panel-title" id="top-band-title">Opaska blatu</h2>
+      <div class="side-options" role="radiogroup" aria-label="Opaska blatu">
+        <button class="side-option band-option is-active" type="button" data-band="off" role="radio" aria-checked="true">
+          <span class="size-main">Nie</span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+
+        <button class="side-option band-option" type="button" data-band="on" role="radio" aria-checked="false">
+          <span>
+            <span class="size-main">Tak</span>
+            <span class="size-extra" id="band-surcharge">+ 12,55 zł</span>
+          </span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+      </div>
+    </section>
+
+    <section class="config-section" aria-labelledby="top-finish-title">
+      <h2 class="panel-title" id="top-finish-title">Blat</h2>
+      <div class="finish-options" role="radiogroup" aria-label="Kolor blatu">
+        <button class="finish-option is-active" type="button" data-finish-target="top" data-finish="white" role="radio" aria-checked="true">
+          <span class="finish-preview" style="background-image: url('./finish-white.jpg')"></span>
+          <span class="finish-label">White <span class="finish-check" aria-hidden="true"></span></span>
+        </button>
+        <button class="finish-option" type="button" data-finish-target="top" data-finish="beige" role="radio" aria-checked="false">
+          <span class="finish-preview" style="background-image: url('./finish-beige.jpg')"></span>
+          <span class="finish-label">Beige <span class="finish-check" aria-hidden="true"></span></span>
+        </button>
+        <button class="finish-option" type="button" data-finish-target="top" data-finish="chocolate" role="radio" aria-checked="false">
+          <span class="finish-preview" style="background-image: url('./finish-chocolate.jpg')"></span>
+          <span class="finish-label">Chocolate <span class="finish-check" aria-hidden="true"></span></span>
+        </button>
+      </div>
+    </section>
+
+    <section class="config-section" aria-labelledby="helper-finish-title">
+      <h2 class="panel-title" id="helper-finish-title">Pomocnik</h2>
+      <div class="finish-options" role="radiogroup" aria-label="Kolor pomocnika">
+        <button class="finish-option is-active" type="button" data-finish-target="helper" data-finish="white" role="radio" aria-checked="true">
+          <span class="finish-preview" style="background-image: url('./finish-white.jpg')"></span>
+          <span class="finish-label">White <span class="finish-check" aria-hidden="true"></span></span>
+        </button>
+        <button class="finish-option" type="button" data-finish-target="helper" data-finish="beige" role="radio" aria-checked="false">
+          <span class="finish-preview" style="background-image: url('./finish-beige.jpg')"></span>
+          <span class="finish-label">Beige <span class="finish-check" aria-hidden="true"></span></span>
+        </button>
+        <button class="finish-option" type="button" data-finish-target="helper" data-finish="chocolate" role="radio" aria-checked="false">
+          <span class="finish-preview" style="background-image: url('./finish-chocolate.jpg')"></span>
+          <span class="finish-label">Chocolate <span class="finish-check" aria-hidden="true"></span></span>
+        </button>
+      </div>
+    </section>
+
+    <section class="config-section" aria-labelledby="frame-finish-title">
+      <h2 class="panel-title" id="frame-finish-title">Stelaż</h2>
+      <div class="side-options" role="radiogroup" aria-label="Kolor stelaża">
+        <button class="side-option frame-option is-active" type="button" data-frame-finish="black" role="radio" aria-checked="true">
+          <span class="size-main">Czarny</span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+        <button class="side-option frame-option" type="button" data-frame-finish="white" role="radio" aria-checked="false">
+          <span class="size-main">Biały</span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+      </div>
+    </section>
+
+    <section class="config-section" aria-labelledby="cable-grommet-title">
+      <h2 class="panel-title" id="cable-grommet-title">Przepust kablowy</h2>
+      <div class="side-options" role="radiogroup" aria-label="Przepust kablowy">
+        <button class="side-option cable-option is-active" type="button" data-cable-grommet="off" role="radio" aria-checked="true">
+          <span class="size-main">Nie</span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+        <button class="side-option cable-option" type="button" data-cable-grommet="on" role="radio" aria-checked="false">
+          <span class="size-main">Tak</span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+      </div>
+    </section>
+  </aside>
+
+  <aside class="price-card" aria-live="polite">
+    <button
+      class="pdf-offer-button"
+      id="generate-offer-pdf"
+      type="button"
+      aria-label="Generuj ofertę PDF"
+      title="Generuj ofertę PDF"
+    >
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M7 3.75h6.2L17.5 8v12.25H7z" stroke-width="1.8" stroke-linejoin="round"/>
+        <path d="M13 3.75V8h4.5M9.5 12h5M9.5 15h5M9.5 18h3.25" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="pdf-tooltip" role="tooltip">Generuj ofertę PDF</span>
+    </button>
+
+    <span class="price-content">
+      <span class="price-label">Cena katalogowa</span>
+      <strong class="price-base" id="catalog-price">2 009,45 zł brutto</strong>
+    </span>
+  </aside>
+
+  <script type="module" src="./main.js?v=20260729-public"></script>
+</body>
+</html>
