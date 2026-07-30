@@ -391,12 +391,40 @@
     }
 
     @media (max-width: 760px) {
-      :root { --panel-width: min(280px, calc(100vw - 24px)); }
+      :root { --panel-width: calc(100vw - 24px); }
+
+      html,
+      body {
+        height: auto;
+        min-height: 100%;
+        overflow-x: hidden;
+        overflow-y: auto;
+      }
+
+      #app {
+        position: relative;
+        inset: auto;
+        width: 100%;
+        height: 58svh;
+        min-height: 360px;
+        max-height: 520px;
+        overflow: hidden;
+      }
+
+      #app canvas {
+        width: 100% !important;
+        height: 100% !important;
+      }
 
       .config-panel {
-        top: 12px;
-        left: 12px;
+        position: relative;
+        top: auto;
+        left: auto;
+        width: calc(100% - 24px);
+        max-height: none;
+        margin: 12px auto 0;
         padding: 16px;
+        overflow: visible;
         border-radius: 17px;
       }
 
@@ -404,11 +432,25 @@
       .side-option { min-height: 52px; }
 
       .price-card {
-        right: 12px;
-        bottom: 12px;
-        min-width: 220px;
+        position: relative;
+        right: auto;
+        bottom: auto;
+        width: calc(100% - 24px);
+        min-width: 0;
+        margin: 12px auto 18px;
         padding: 14px 16px;
+        align-items: center;
         border-radius: 16px;
+      }
+
+      .pdf-tooltip {
+        left: 50%;
+        transform: translate(-50%, 4px);
+      }
+
+      .pdf-offer-button:hover .pdf-tooltip,
+      .pdf-offer-button:focus-visible .pdf-tooltip {
+        transform: translate(-50%, 0);
       }
     }
   </style>
@@ -573,6 +615,6 @@
     </span>
   </aside>
 
-  <script type="module" src="./main.js?v=20260729-public"></script>
+  <script type="module" src="./main.js?v=20260730-mobile-panel"></script>
 </body>
 </html>

@@ -55,9 +55,18 @@ const app = document.querySelector('#app');
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xf2f3f5);
 
+function getAppViewportSize() {
+  const rect = app.getBoundingClientRect();
+  return {
+    width: Math.max(1, Math.round(rect.width || window.innerWidth)),
+    height: Math.max(1, Math.round(rect.height || window.innerHeight))
+  };
+}
+
+const initialViewport = getAppViewportSize();
 const camera = new THREE.PerspectiveCamera(
   38,
-  window.innerWidth / window.innerHeight,
+  initialViewport.width / initialViewport.height,
   0.1,
   1200
 );
@@ -65,7 +74,7 @@ camera.position.set(10, 102, 205);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setSize(initialViewport.width, initialViewport.height);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -2504,16 +2513,24 @@ document
 // ============================================================
 // RENDEROWANIE
 // ============================================================
+let viewportSize = initialViewport;
+
 function onResize() {
-  camera.aspect = window.innerWidth / window.innerHeight;
+  viewportSize = getAppViewportSize();
+  camera.aspect = viewportSize.width / viewportSize.height;
   camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setSize(viewportSize.width, viewportSize.height);
 }
 
 window.addEventListener('resize', onResize);
 
+if ('ResizeObserver' in window) {
+  const appResizeObserver = new ResizeObserver(onResize);
+  appResizeObserver.observe(app);
+}
+
 function renderMainScene() {
-  renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
+  renderer.setViewport(0, 0, viewportSize.width, viewportSize.height);
   renderer.setScissorTest(false);
   renderer.clear();
   renderer.render(scene, camera);
@@ -2526,14 +2543,14 @@ function renderGizmo() {
   renderer.clearDepth();
   renderer.setScissorTest(true);
   renderer.setViewport(
-    window.innerWidth - GIZMO_SIZE - GIZMO_MARGIN,
-    window.innerHeight - GIZMO_SIZE - GIZMO_MARGIN,
+    viewportSize.width - GIZMO_SIZE - GIZMO_MARGIN,
+    viewportSize.height - GIZMO_SIZE - GIZMO_MARGIN,
     GIZMO_SIZE,
     GIZMO_SIZE
   );
   renderer.setScissor(
-    window.innerWidth - GIZMO_SIZE - GIZMO_MARGIN,
-    window.innerHeight - GIZMO_SIZE - GIZMO_MARGIN,
+    viewportSize.width - GIZMO_SIZE - GIZMO_MARGIN,
+    viewportSize.height - GIZMO_SIZE - GIZMO_MARGIN,
     GIZMO_SIZE,
     GIZMO_SIZE
   );
