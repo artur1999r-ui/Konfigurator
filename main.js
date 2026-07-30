@@ -1273,11 +1273,6 @@ const gizmoPointer = new THREE.Vector2();
 const GIZMO_SIZE = 160;
 const GIZMO_MARGIN = 16;
 const GIZMO_DRAG_SPEED = 0.009;
-const mobileLayoutQuery = window.matchMedia('(max-width: 760px)');
-
-function isGizmoEnabled() {
-  return !mobileLayoutQuery.matches;
-}
 
 let cameraTransition = null;
 let gizmoDragging = false;
@@ -1345,8 +1340,6 @@ function getGizmoRect() {
 }
 
 function isInsideGizmo(clientX, clientY) {
-  if (!isGizmoEnabled()) return false;
-
   const canvasRect = renderer.domElement.getBoundingClientRect();
   const gizmoRect = getGizmoRect();
   const x = clientX - canvasRect.left;
@@ -2544,8 +2537,6 @@ function renderMainScene() {
 }
 
 function renderGizmo() {
-  if (!isGizmoEnabled()) return;
-
   gizmoCube.quaternion.copy(camera.quaternion).invert();
   gizmoEdges.quaternion.copy(gizmoCube.quaternion);
 
