@@ -257,6 +257,117 @@
     }
 
 
+    .wardrobe-size-card {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 12px;
+      min-height: 58px;
+      padding: 11px 12px 11px 14px;
+      border: 1px solid rgba(47, 143, 91, 0.58);
+      border-radius: 13px;
+      background: linear-gradient(145deg, #f9fffb, var(--accent-soft));
+      box-shadow: inset 0 0 0 1px rgba(47, 143, 91, 0.10);
+    }
+
+    .wardrobe-size-card .option-check {
+      border-color: var(--accent);
+      background: var(--accent);
+      box-shadow: 0 0 0 4px rgba(47, 143, 91, 0.12);
+    }
+
+    .wardrobe-size-card .option-check::after {
+      content: "";
+      position: absolute;
+      left: 6px;
+      top: 3px;
+      width: 6px;
+      height: 10px;
+      border: solid #fff;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+
+    .wardrobe-handle-options {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .wardrobe-handle-option {
+      min-width: 0;
+      display: grid;
+      gap: 7px;
+      justify-items: stretch;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: var(--surface-soft);
+      color: var(--ink);
+      font: inherit;
+      font-size: 10.5px;
+      font-weight: 750;
+      text-align: center;
+      cursor: pointer;
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+    }
+
+    .wardrobe-handle-option:hover,
+    .wardrobe-handle-option:focus-visible {
+      transform: translateY(-1px);
+      border-color: rgba(47, 143, 91, 0.34);
+      box-shadow: 0 8px 18px rgba(29, 33, 38, 0.07);
+      outline: none;
+    }
+
+    .wardrobe-handle-option.is-active {
+      border-color: rgba(47, 143, 91, 0.58);
+      background: linear-gradient(145deg, #f9fffb, var(--accent-soft));
+      box-shadow: inset 0 0 0 1px rgba(47, 143, 91, 0.10);
+    }
+
+    .wardrobe-handle-swatch {
+      display: block;
+      width: 100%;
+      height: 28px;
+      border-radius: 8px;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.14);
+    }
+
+    .wardrobe-spec-list {
+      display: grid;
+      gap: 9px;
+      margin: 0;
+    }
+
+    .wardrobe-spec-row {
+      display: grid;
+      gap: 2px;
+      padding-bottom: 9px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .wardrobe-spec-row:last-child {
+      padding-bottom: 0;
+      border-bottom: 0;
+    }
+
+    .wardrobe-spec-row dt {
+      color: #777e86;
+      font-size: 10.5px;
+      font-weight: 760;
+      letter-spacing: 0.045em;
+      text-transform: uppercase;
+    }
+
+    .wardrobe-spec-row dd {
+      margin: 0;
+      font-size: 12px;
+      font-weight: 680;
+      line-height: 1.35;
+    }
+
     .price-card {
       position: fixed;
       right: 18px;
@@ -519,13 +630,13 @@
       outline: none;
     }
 
-    body.route-wardrobe .config-panel,
-    body.route-wardrobe .price-card {
-      display: none;
+    body.route-desk [data-product-ui="wardrobe"],
+    body.route-wardrobe [data-product-ui="desk"] {
+      display: none !important;
     }
 
-    body.route-wardrobe .product-back-button {
-      left: 18px;
+    body.route-wardrobe .wardrobe-config-panel {
+      display: block;
     }
 
     @media (max-width: 760px) {
@@ -549,27 +660,17 @@
         font-size: 27px;
       }
 
-      .product-back-button,
-      body.route-wardrobe .product-back-button {
+      .product-back-button {
         top: 12px;
         left: 12px;
         min-height: 38px;
         padding: 0 12px;
       }
 
-      body.route-start,
-      body.route-wardrobe {
+      body.route-start {
         height: 100%;
         min-height: 100%;
         overflow: hidden;
-      }
-
-      body.route-wardrobe #app {
-        position: fixed;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        box-shadow: none;
       }
 
       html,
@@ -619,6 +720,10 @@
 
       .size-option,
       .side-option { min-height: 52px; }
+
+      body.route-wardrobe .wardrobe-config-panel {
+        margin-bottom: 18px;
+      }
 
       .price-card {
         position: relative;
@@ -793,6 +898,84 @@
     </section>
   </aside>
 
+  <aside class="config-panel wardrobe-config-panel" data-product-ui="wardrobe" aria-label="Konfiguracja szafy">
+    <section class="config-section" aria-labelledby="wardrobe-size-title">
+      <h2 class="panel-title" id="wardrobe-size-title">Rozmiar</h2>
+      <div class="wardrobe-size-card" aria-label="Rozmiar szafy 40 na 40 na 189 centymetrów">
+        <span>
+          <span class="size-main">40 × 40 × 189 cm</span>
+          <span class="size-extra">Szer. × Gł. × Wys.</span>
+        </span>
+        <span class="option-check" aria-hidden="true"></span>
+      </div>
+    </section>
+
+    <section class="config-section" aria-labelledby="wardrobe-back-title">
+      <h2 class="panel-title" id="wardrobe-back-title">Plecy</h2>
+      <div class="size-options" role="radiogroup" aria-label="Materiał pleców szafy">
+        <button class="side-option wardrobe-back-option is-active" type="button" data-wardrobe-back="hdf" role="radio" aria-checked="true">
+          <span>
+            <span class="size-main">Płyta HDF 3 mm</span>
+            <span class="size-extra">Standard</span>
+          </span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+        <button class="side-option wardrobe-back-option" type="button" data-wardrobe-back="melamine" role="radio" aria-checked="false">
+          <span>
+            <span class="size-main">Płyta melaminowana 18 mm</span>
+            <span class="size-extra">+ 200,00 zł</span>
+          </span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+      </div>
+    </section>
+
+    <section class="config-section" aria-labelledby="wardrobe-handle-title">
+      <h2 class="panel-title" id="wardrobe-handle-title">Kolor uchwytu</h2>
+      <div class="wardrobe-handle-options" role="radiogroup" aria-label="Kolor uchwytu krawędziowego">
+        <button class="wardrobe-handle-option is-active" type="button" data-wardrobe-handle="gray" role="radio" aria-checked="true">
+          <span class="wardrobe-handle-swatch" style="background:#8f9499"></span>
+          <span>Szary</span>
+        </button>
+        <button class="wardrobe-handle-option" type="button" data-wardrobe-handle="white" role="radio" aria-checked="false">
+          <span class="wardrobe-handle-swatch" style="background:#f2f2ef"></span>
+          <span>Biały</span>
+        </button>
+        <button class="wardrobe-handle-option" type="button" data-wardrobe-handle="black" role="radio" aria-checked="false">
+          <span class="wardrobe-handle-swatch" style="background:#252628"></span>
+          <span>Czarny</span>
+        </button>
+      </div>
+      <span class="size-extra" style="margin-top:8px">Uchwyt krawędziowy L = 100 mm</span>
+    </section>
+
+    <section class="config-section" aria-labelledby="wardrobe-construction-title">
+      <h2 class="panel-title" id="wardrobe-construction-title">Konstrukcja</h2>
+      <dl class="wardrobe-spec-list">
+        <div class="wardrobe-spec-row">
+          <dt>Wieniec górny</dt>
+          <dd>Płyta melaminowana 18 mm</dd>
+        </div>
+        <div class="wardrobe-spec-row">
+          <dt>Boki</dt>
+          <dd>Płyta melaminowana 18 mm</dd>
+        </div>
+        <div class="wardrobe-spec-row">
+          <dt>Półki wewnętrzne</dt>
+          <dd>4 × płyta melaminowana 18 mm</dd>
+        </div>
+        <div class="wardrobe-spec-row">
+          <dt>Front</dt>
+          <dd>Płyta melaminowana 18 mm</dd>
+        </div>
+        <div class="wardrobe-spec-row">
+          <dt>Wieniec dolny</dt>
+          <dd>Płyta melaminowana 18 mm</dd>
+        </div>
+      </dl>
+    </section>
+  </aside>
+
   <aside class="price-card" data-product-ui="desk" aria-live="polite">
     <button
       class="pdf-offer-button"
@@ -814,6 +997,6 @@
     </span>
   </aside>
 
-  <script type="module" src="./main.js?v=20260801-portfolio-v10"></script>
+  <script type="module" src="./main.js?v=20260801-wardrobe-v11"></script>
 </body>
 </html>

@@ -40,6 +40,18 @@ const CABLE_GROMMET_CLEARANCE = 1.3;
 // Stelaż prawy
 const FRAME_PROFILE = 4.0; // 4 x 4 cm
 
+// Szafa
+const WARDROBE_WIDTH = 40;
+const WARDROBE_DEPTH = 40;
+const WARDROBE_HEIGHT = 189;
+const WARDROBE_BOARD = 1.8; // płyta melaminowana 18 mm
+const WARDROBE_HDF_BACK = 0.3; // płyta HDF 3 mm
+const WARDROBE_SHELF_COUNT = 4;
+const WARDROBE_HANDLE_LENGTH = 10; // L = 100 mm
+const WARDROBE_BACK_SURCHARGE = 200;
+let selectedWardrobeBack = 'hdf';
+let selectedWardrobeHandle = 'gray';
+
 // Układ osi:
 // X — szerokość
 // Y — wysokość
@@ -50,7 +62,7 @@ const FRAME_PROFILE = 4.0; // 4 x 4 cm
 const app = document.querySelector('#app');
 
 // Aktywny widok portfolio: ekran startowy, konfigurator biurka lub szafy.
-// Szafa jest na razie pustym środowiskiem 3D z podłogą, kamerą i kostką widoku.
+// Szafa ma własny model 3D i panel konfiguracji, a wspólna scena zachowuje podłogę, kamerę i kostkę widoku.
 let activeProduct = 'start';
 
 
@@ -316,12 +328,51 @@ const cableGrommetBrushMaterial = new THREE.MeshStandardMaterial({
   metalness: 0
 });
 
+const wardrobeHdfMaterial = new THREE.MeshStandardMaterial({
+  color: 0xd2cec3,
+  roughness: 0.92,
+  metalness: 0
+});
+
+const wardrobeHandleMaterials = {
+  gray: new THREE.MeshStandardMaterial({
+    color: 0x8f9499,
+    roughness: 0.38,
+    metalness: 0.68
+  }),
+  white: new THREE.MeshStandardMaterial({
+    color: 0xf2f2ef,
+    roughness: 0.46,
+    metalness: 0.36
+  }),
+  black: new THREE.MeshStandardMaterial({
+    color: 0x252628,
+    roughness: 0.40,
+    metalness: 0.58
+  })
+};
+
 const model = new THREE.Group();
 scene.add(model);
 
 const helperGroup = new THREE.Group();
 helperGroup.name = 'Pomocnik';
 model.add(helperGroup);
+
+const wardrobeModel = new THREE.Group();
+wardrobeModel.name = 'Szafa';
+wardrobeModel.visible = false;
+scene.add(wardrobeModel);
+
+const wardrobeBodyGroup = new THREE.Group();
+wardrobeBodyGroup.name = 'Korpus szafy';
+wardrobeModel.add(wardrobeBodyGroup);
+
+const wardrobeBackGroup = new THREE.Group();
+wardrobeBackGroup.name = 'Plecy szafy';
+wardrobeModel.add(wardrobeBackGroup);
+
+let wardrobeHandleMesh = null;
 
 function addBoard({ name, size, position, parent = model, materials = boardMaterials }) {
   const geometry = new THREE.BoxGeometry(size.x, size.y, size.z);
@@ -346,6 +397,158 @@ function createTranslatedBox(size, position) {
   geometry.translate(position.x, position.y, position.z);
   return geometry;
 }
+
+// ============================================================
+// SZAFA 40 × 40 × 189 CM
+// ============================================================
+function clearGeneratedGroup(group) {
+  [...group.children].forEach((child) => {
+    group.remove(child);
+    child.geometry?.dispose();
+  });
+}
+
+function rebuildWardrobeBack() {
+  clearGeneratedGroup(wardrobeBackGroup);
+
+  const thickness = selectedWardrobeBack === 'melamine'
+    ? WARDROBE_BOARD
+    : WARDROBE_HDF_BACK;
+  const materials = selectedWardrobeBack === 'melamine'
+    ? finishMaterialSets.white
+    : wardrobeHdfMaterial;
+
+  // Plecy mieszczą się w nominalnej głębokości 40 cm.
+  addBoard({
+    name: selectedWardrobeBack === 'melamine'
+      ? 'Plecy — płyta melaminowana 18 mm'
+      : 'Plecy — płyta HDF 3 mm',
+    size: new THREE.Vector3(
+      WARDROBE_WIDTH - WARDROBE_BOARD * 2,
+      WARDROBE_HEIGHT - WARDROBE_BOARD * 2,
+      thickness
+    ),
+    position: new THREE.Vector3(
+      0,
+      WARDROBE_HEIGHT / 2,
+      -WARDROBE_DEPTH / 2 + thickness / 2
+    ),
+    parent: wardrobeBackGroup,
+    materials
+  });
+}
+
+function applyWardrobeHandleFinish() {
+  if (!wardrobeHandleMesh) return;
+  wardrobeHandleMesh.material = wardrobeHandleMaterials[selectedWardrobeHandle];
+  wardrobeHandleMesh.material.needsUpdate = true;
+}
+
+function buildWardrobeModel() {
+  clearGeneratedGroup(wardrobeBodyGroup);
+
+  // Korpus kończy się 18 mm przed frontem. Front uzupełnia nominalną
+  // głębokość szafy do 40 cm.
+  const carcassDepth = WARDROBE_DEPTH - WARDROBE_BOARD;
+  const carcassCenterZ = -WARDROBE_BOARD / 2;
+  const innerHeight = WARDROBE_HEIGHT - WARDROBE_BOARD * 2;
+  const innerWidth = WARDROBE_WIDTH - WARDROBE_BOARD * 2;
+  const bodyMaterials = finishMaterialSets.white;
+
+  addBoard({
+    name: 'Wieniec górny 18 mm',
+    size: new THREE.Vector3(WARDROBE_WIDTH, WARDROBE_BOARD, carcassDepth),
+    position: new THREE.Vector3(
+      0,
+      WARDROBE_HEIGHT - WARDROBE_BOARD / 2,
+      carcassCenterZ
+    ),
+    parent: wardrobeBodyGroup,
+    materials: bodyMaterials
+  });
+
+  addBoard({
+    name: 'Wieniec dolny 18 mm',
+    size: new THREE.Vector3(WARDROBE_WIDTH, WARDROBE_BOARD, carcassDepth),
+    position: new THREE.Vector3(0, WARDROBE_BOARD / 2, carcassCenterZ),
+    parent: wardrobeBodyGroup,
+    materials: bodyMaterials
+  });
+
+  addBoard({
+    name: 'Bok lewy 18 mm',
+    size: new THREE.Vector3(WARDROBE_BOARD, innerHeight, carcassDepth),
+    position: new THREE.Vector3(
+      -WARDROBE_WIDTH / 2 + WARDROBE_BOARD / 2,
+      WARDROBE_HEIGHT / 2,
+      carcassCenterZ
+    ),
+    parent: wardrobeBodyGroup,
+    materials: bodyMaterials
+  });
+
+  addBoard({
+    name: 'Bok prawy 18 mm',
+    size: new THREE.Vector3(WARDROBE_BOARD, innerHeight, carcassDepth),
+    position: new THREE.Vector3(
+      WARDROBE_WIDTH / 2 - WARDROBE_BOARD / 2,
+      WARDROBE_HEIGHT / 2,
+      carcassCenterZ
+    ),
+    parent: wardrobeBodyGroup,
+    materials: bodyMaterials
+  });
+
+  // Cztery półki dzielą wnętrze na pięć równych przestrzeni.
+  for (let index = 1; index <= WARDROBE_SHELF_COUNT; index += 1) {
+    const shelfY = WARDROBE_BOARD +
+      (innerHeight * index) / (WARDROBE_SHELF_COUNT + 1);
+
+    addBoard({
+      name: `Półka wewnętrzna ${index} — 18 mm`,
+      size: new THREE.Vector3(innerWidth, WARDROBE_BOARD, carcassDepth - 2.2),
+      position: new THREE.Vector3(0, shelfY, carcassCenterZ + 0.6),
+      parent: wardrobeBodyGroup,
+      materials: bodyMaterials
+    });
+  }
+
+  addBoard({
+    name: 'Front 18 mm',
+    size: new THREE.Vector3(
+      WARDROBE_WIDTH - 0.6,
+      WARDROBE_HEIGHT - 0.6,
+      WARDROBE_BOARD
+    ),
+    position: new THREE.Vector3(
+      0,
+      WARDROBE_HEIGHT / 2,
+      WARDROBE_DEPTH / 2 - WARDROBE_BOARD / 2
+    ),
+    parent: wardrobeBodyGroup,
+    materials: bodyMaterials
+  });
+
+  const handleGeometry = new THREE.BoxGeometry(0.72, WARDROBE_HANDLE_LENGTH, 0.92);
+  wardrobeHandleMesh = new THREE.Mesh(
+    handleGeometry,
+    wardrobeHandleMaterials[selectedWardrobeHandle]
+  );
+  wardrobeHandleMesh.name = 'Uchwyt krawędziowy L=100 mm';
+  wardrobeHandleMesh.position.set(
+    WARDROBE_WIDTH / 2 - 0.62,
+    WARDROBE_HEIGHT / 2,
+    WARDROBE_DEPTH / 2 + 0.16
+  );
+  wardrobeHandleMesh.castShadow = true;
+  wardrobeHandleMesh.receiveShadow = true;
+  wardrobeBodyGroup.add(wardrobeHandleMesh);
+
+  rebuildWardrobeBack();
+  applyWardrobeHandleFinish();
+}
+
+buildWardrobeModel();
 
 // ============================================================
 // KONSTRUKCJA POMOCNIKA
@@ -1177,6 +1380,51 @@ document.querySelectorAll('.cable-option').forEach((button) => {
     selectCableGrommet(button.dataset.cableGrommet === 'on');
   });
 });
+
+function updateWardrobeBackInterface(backType) {
+  document.querySelectorAll('.wardrobe-back-option').forEach((button) => {
+    const isSelected = button.dataset.wardrobeBack === backType;
+    button.classList.toggle('is-active', isSelected);
+    button.setAttribute('aria-checked', String(isSelected));
+  });
+}
+
+function updateWardrobeHandleInterface(handleColor) {
+  document.querySelectorAll('.wardrobe-handle-option').forEach((button) => {
+    const isSelected = button.dataset.wardrobeHandle === handleColor;
+    button.classList.toggle('is-active', isSelected);
+    button.setAttribute('aria-checked', String(isSelected));
+  });
+}
+
+function selectWardrobeBack(backType) {
+  if (!['hdf', 'melamine'].includes(backType)) return;
+  selectedWardrobeBack = backType;
+  rebuildWardrobeBack();
+  updateWardrobeBackInterface(selectedWardrobeBack);
+}
+
+function selectWardrobeHandle(handleColor) {
+  if (!['gray', 'white', 'black'].includes(handleColor)) return;
+  selectedWardrobeHandle = handleColor;
+  applyWardrobeHandleFinish();
+  updateWardrobeHandleInterface(selectedWardrobeHandle);
+}
+
+document.querySelectorAll('.wardrobe-back-option').forEach((button) => {
+  button.addEventListener('click', () => {
+    selectWardrobeBack(button.dataset.wardrobeBack);
+  });
+});
+
+document.querySelectorAll('.wardrobe-handle-option').forEach((button) => {
+  button.addEventListener('click', () => {
+    selectWardrobeHandle(button.dataset.wardrobeHandle);
+  });
+});
+
+updateWardrobeBackInterface(selectedWardrobeBack);
+updateWardrobeHandleInterface(selectedWardrobeHandle);
 
 // ============================================================
 // PRZEPUST KABLOWY — przeciąganie i otwieranie klapki
@@ -2628,17 +2876,49 @@ function getProductFromHash() {
   return 'start';
 }
 
+function frameProductInCamera(product) {
+  camera.up.set(0, 1, 0);
+  cameraTransition = null;
+
+  if (product === 'wardrobe') {
+    controls.target.set(0, WARDROBE_HEIGHT / 2, 0);
+    controls.minDistance = 155;
+    controls.maxDistance = 500;
+
+    const wardrobeDirection = new THREE.Vector3(0.34, 0.16, 1).normalize();
+    camera.position
+      .copy(controls.target)
+      .add(wardrobeDirection.multiplyScalar(330));
+  } else {
+    controls.target.set(0, HEIGHT * 0.55, 0);
+    controls.minDistance = 100;
+    controls.maxDistance = 360;
+
+    camera.position
+      .copy(controls.target)
+      .add(new THREE.Vector3(0.30, 0.25, 1).normalize().multiplyScalar(360));
+  }
+
+  camera.lookAt(controls.target);
+  controls.update();
+}
+
 function setProductRoute(product) {
   const nextProduct = ['desk', 'wardrobe'].includes(product) ? product : 'start';
+  const previousProduct = activeProduct;
   activeProduct = nextProduct;
 
   document.body.classList.remove('route-start', 'route-desk', 'route-wardrobe');
   document.body.classList.add(`route-${nextProduct}`);
 
-  // Biurko zachowujemy w pamięci i tylko ukrywamy, gdy oglądana jest szafa.
-  // Dzięki temu powrót do biurka nie resetuje wybranej konfiguracji.
+  // Każdy produkt zachowujemy w pamięci i przełączamy wyłącznie widoczność grup.
   model.visible = nextProduct === 'desk';
+  wardrobeModel.visible = nextProduct === 'wardrobe';
   cablePositionIndicator.classList.remove('is-visible');
+
+  if (nextProduct !== 'start' && nextProduct !== previousProduct) {
+    frameProductInCamera(nextProduct);
+  }
 
   document.title =
     nextProduct === 'desk'
@@ -2651,7 +2931,7 @@ function setProductRoute(product) {
   productBackButton?.setAttribute('aria-hidden', String(nextProduct === 'start'));
 
   // Po zmianie produktu wracamy do początku dokumentu i dopasowujemy renderer
-  // do aktualnego układu (pełny ekran dla szafy, stały podgląd dla biurka mobilnie).
+  // do aktualnego układu mobilnego lub komputerowego.
   window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   requestAnimationFrame(() => {
     onResize();

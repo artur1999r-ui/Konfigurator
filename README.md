@@ -1,31 +1,22 @@
-# Konfigurator biurka 3D — GitHub Pages
+# Konfigurator produktów 3D — GitHub Pages
 
-## Publikacja przez stronę GitHub
+Projekt zawiera ekran wyboru produktu oraz konfiguratory:
 
-1. Utwórz nowe publiczne repozytorium, np. `konfigurator-biurka`.
-2. Rozpakuj paczkę ZIP.
-3. W repozytorium kliknij **Add file → Upload files**.
-4. Przeciągnij wszystkie pliki z tego folderu:
-   - index.html
-   - main.js
-   - finish-white.jpg
-   - finish-beige.jpg
-   - finish-chocolate.jpg
-   - floor-texture.jpg
-   - .nojekyll
-5. Kliknij **Commit changes**.
-6. Wejdź w **Settings → Pages**.
-7. W sekcji **Build and deployment** wybierz:
+- Biurko
+- Szafa 40 × 40 × 189 cm
+
+## Aktualizacja istniejącego repozytorium
+
+W repozytorium GitHub podmień pliki `index.html` i `main.js`, a następnie kliknij **Commit changes**.
+
+## Pełna publikacja
+
+1. Wgraj wszystkie pliki do głównego katalogu repozytorium.
+2. Wejdź w **Settings → Pages**.
+3. Ustaw:
    - Source: **Deploy from a branch**
    - Branch: **main**
    - Folder: **/(root)**
-8. Kliknij **Save**.
+4. Kliknij **Save**.
 
-Po chwili strona będzie dostępna pod adresem:
-
-`https://TWOJ-LOGIN.github.io/konfigurator-biurka/`
-
-## Ważne
-
-Plik `index.html` musi znajdować się w głównym katalogu repozytorium.
-Nie wrzucaj samego pliku ZIP do repozytorium — najpierw go rozpakuj.
+Plik `index.html` musi znajdować się bezpośrednio w głównym katalogu repozytorium.
