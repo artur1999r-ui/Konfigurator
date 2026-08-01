@@ -391,32 +391,36 @@
     }
 
     @media (max-width: 760px) {
-      :root { --panel-width: calc(100vw - 24px); }
+      :root {
+        --panel-width: calc(100vw - 24px);
+        --mobile-viewer-height: clamp(280px, 42svh, 390px);
+      }
 
       html,
       body {
         height: auto;
         min-height: 100%;
         overflow-x: hidden;
-        overflow-y: auto;
+        overflow-y: visible;
       }
 
       /*
-       * Mobilnie podgląd pozostaje przyklejony u góry ekranu,
-       * a panel konfiguracji przewija się pod nim. Dzięki temu model
-       * jest widoczny podczas zmiany wszystkich opcji.
+       * Na telefonie podgląd jest naprawdę stały (fixed), a nie sticky.
+       * Dzięki temu Safari nie wypuszcza go poza ekran podczas długiego
+       * przewijania panelu konfiguracji.
        */
       #app {
-        position: -webkit-sticky;
-        position: sticky;
-        inset: auto;
-        top: 0;
+        position: fixed;
+        inset: 0 0 auto 0;
         z-index: 20;
         width: 100%;
-        height: clamp(300px, 46svh, 430px);
+        height: var(--mobile-viewer-height);
         overflow: hidden;
         background: #eef1f4;
         box-shadow: 0 12px 30px rgba(26, 30, 35, 0.10);
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+        will-change: transform;
       }
 
       #app canvas {
@@ -431,7 +435,7 @@
         left: auto;
         width: calc(100% - 24px);
         max-height: none;
-        margin: 12px auto 0;
+        margin: calc(var(--mobile-viewer-height) + 12px) auto 0;
         padding: 16px;
         overflow: visible;
         border-radius: 17px;
@@ -624,6 +628,6 @@
     </span>
   </aside>
 
-  <script type="module" src="./main.js?v=20260730-mobile-sticky"></script>
+  <script type="module" src="./main.js?v=20260730-mobile-fixed"></script>
 </body>
 </html>
