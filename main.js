@@ -53,6 +53,7 @@ const WARDROBE_BACK_SURCHARGE = 200;
 let selectedWardrobeBack = 'hdf';
 let selectedWardrobeHandle = 'gray';
 let selectedWardrobeFinish = 'white';
+let wardrobeDoorOpen = false;
 
 // Układ osi:
 // X — szerokość
@@ -374,7 +375,9 @@ const wardrobeBackGroup = new THREE.Group();
 wardrobeBackGroup.name = 'Plecy szafy';
 wardrobeModel.add(wardrobeBackGroup);
 
+let wardrobeDoorPivot = null;
 let wardrobeHandleMesh = null;
+let wardrobeHandleHitMesh = null;
 
 function addBoard({ name, size, position, parent = model, materials = boardMaterials }) {
   const geometry = new THREE.BoxGeometry(size.x, size.y, size.z);
@@ -406,7 +409,9 @@ function createTranslatedBox(size, position) {
 function clearGeneratedGroup(group) {
   [...group.children].forEach((child) => {
     group.remove(child);
-    child.geometry?.dispose();
+    child.traverse((descendant) => {
+      descendant.geometry?.dispose();
+    });
   });
 }
 
@@ -515,19 +520,28 @@ function buildWardrobeModel() {
     });
   }
 
+  // Front i uchwyt znajdują się we wspólnej grupie z osią obrotu przy
+  // lewej krawędzi. Dzięki temu kliknięcie uchwytu otwiera całe drzwi.
+  const doorWidth = WARDROBE_WIDTH - 0.6;
+  const doorHeight = WARDROBE_HEIGHT - 0.6;
+  const doorCenterZ = WARDROBE_DEPTH / 2 - WARDROBE_BOARD / 2;
+  const hingeX = -doorWidth / 2;
+
+  wardrobeDoorPivot = new THREE.Group();
+  wardrobeDoorPivot.name = 'Zawias drzwi szafy';
+  wardrobeDoorPivot.position.set(hingeX, 0, doorCenterZ);
+  wardrobeDoorPivot.rotation.y = wardrobeDoorOpen ? -Math.PI * 0.56 : 0;
+  wardrobeBodyGroup.add(wardrobeDoorPivot);
+
   addBoard({
     name: 'Front 18 mm',
-    size: new THREE.Vector3(
-      WARDROBE_WIDTH - 0.6,
-      WARDROBE_HEIGHT - 0.6,
-      WARDROBE_BOARD
-    ),
+    size: new THREE.Vector3(doorWidth, doorHeight, WARDROBE_BOARD),
     position: new THREE.Vector3(
-      0,
+      doorWidth / 2,
       WARDROBE_HEIGHT / 2,
-      WARDROBE_DEPTH / 2 - WARDROBE_BOARD / 2
+      0
     ),
-    parent: wardrobeBodyGroup,
+    parent: wardrobeDoorPivot,
     materials: bodyMaterials
   });
 
@@ -538,13 +552,28 @@ function buildWardrobeModel() {
   );
   wardrobeHandleMesh.name = 'Uchwyt krawędziowy L=100 mm';
   wardrobeHandleMesh.position.set(
-    WARDROBE_WIDTH / 2 - 0.62,
+    doorWidth - 0.32,
     WARDROBE_HEIGHT / 2,
-    WARDROBE_DEPTH / 2 + 0.16
+    WARDROBE_BOARD / 2 + 0.16
   );
   wardrobeHandleMesh.castShadow = true;
   wardrobeHandleMesh.receiveShadow = true;
-  wardrobeBodyGroup.add(wardrobeHandleMesh);
+  wardrobeDoorPivot.add(wardrobeHandleMesh);
+
+  // Niewidoczny, nieco większy obszar ułatwia trafienie w uchwyt palcem,
+  // ale drzwi nadal otwierają się wyłącznie po kliknięciu przy uchwycie.
+  wardrobeHandleHitMesh = new THREE.Mesh(
+    new THREE.BoxGeometry(3.2, WARDROBE_HANDLE_LENGTH + 5, 3.4),
+    new THREE.MeshBasicMaterial({
+      transparent: true,
+      opacity: 0,
+      depthWrite: false
+    })
+  );
+  wardrobeHandleHitMesh.name = 'Obszar kliknięcia uchwytu';
+  wardrobeHandleHitMesh.position.copy(wardrobeHandleMesh.position);
+  wardrobeHandleHitMesh.userData.isWardrobeHandleHitArea = true;
+  wardrobeDoorPivot.add(wardrobeHandleHitMesh);
 
   rebuildWardrobeBack();
   applyWardrobeHandleFinish();
@@ -1447,6 +1476,79 @@ updateWardrobeHandleInterface(selectedWardrobeHandle);
 updateFinishInterface('wardrobe', selectedWardrobeFinish);
 
 // ============================================================
+// SZAFA — kliknięcie uchwytu otwiera i zamyka drzwi
+// ============================================================
+const wardrobeRaycaster = new THREE.Raycaster();
+const wardrobePointer = new THREE.Vector2();
+let wardrobeHandlePressed = false;
+let wardrobeHandlePointerId = null;
+let wardrobeHandlePressX = 0;
+let wardrobeHandlePressY = 0;
+
+function setWardrobePointer(event) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  wardrobePointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  wardrobePointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+}
+
+function getWardrobeHandleHit(event) {
+  if (
+    activeProduct !== 'wardrobe' ||
+    !wardrobeHandleHitMesh ||
+    !wardrobeModel.visible
+  ) {
+    return null;
+  }
+
+  setWardrobePointer(event);
+  wardrobeRaycaster.setFromCamera(wardrobePointer, camera);
+  return wardrobeRaycaster.intersectObject(wardrobeHandleHitMesh, false)[0] ?? null;
+}
+
+renderer.domElement.addEventListener('pointerdown', (event) => {
+  if (!getWardrobeHandleHit(event)) return;
+
+  event.preventDefault();
+  event.stopImmediatePropagation();
+
+  wardrobeHandlePressed = true;
+  wardrobeHandlePointerId = event.pointerId;
+  wardrobeHandlePressX = event.clientX;
+  wardrobeHandlePressY = event.clientY;
+  controls.enabled = false;
+  renderer.domElement.setPointerCapture(event.pointerId);
+  renderer.domElement.style.cursor = 'pointer';
+}, true);
+
+function finishWardrobeHandleInteraction(event) {
+  if (!wardrobeHandlePressed || event.pointerId !== wardrobeHandlePointerId) return;
+
+  event.preventDefault();
+  event.stopImmediatePropagation();
+
+  const movement = Math.hypot(
+    event.clientX - wardrobeHandlePressX,
+    event.clientY - wardrobeHandlePressY
+  );
+
+  if (movement < 8) {
+    wardrobeDoorOpen = !wardrobeDoorOpen;
+  }
+
+  if (renderer.domElement.hasPointerCapture(event.pointerId)) {
+    renderer.domElement.releasePointerCapture(event.pointerId);
+  }
+
+  wardrobeHandlePressed = false;
+  wardrobeHandlePointerId = null;
+  controls.enabled = true;
+  renderer.domElement.style.cursor = 'default';
+}
+
+renderer.domElement.addEventListener('pointerup', finishWardrobeHandleInteraction, true);
+renderer.domElement.addEventListener('pointercancel', finishWardrobeHandleInteraction, true);
+
+// ============================================================
 // PRZEPUST KABLOWY — przeciąganie i otwieranie klapki
 // ============================================================
 const cableRaycaster = new THREE.Raycaster();
@@ -1468,7 +1570,7 @@ function setCablePointer(event) {
 }
 
 function getCableHit(event) {
-  if (!selectedCableGrommet || !cableGrommetInteractiveMeshes.length) return null;
+  if (activeProduct !== 'desk' || !selectedCableGrommet || !cableGrommetInteractiveMeshes.length) return null;
   setCablePointer(event);
   cableRaycaster.setFromCamera(cablePointer, camera);
   return cableRaycaster.intersectObjects(cableGrommetInteractiveMeshes, false)[0] ?? null;
@@ -3110,6 +3212,12 @@ function renderGizmo() {
 function animate(now = 0) {
   requestAnimationFrame(animate);
   updateCameraTransition(now);
+
+  if (wardrobeDoorPivot) {
+    const targetDoorRotation = wardrobeDoorOpen ? -Math.PI * 0.56 : 0;
+    wardrobeDoorPivot.rotation.y +=
+      (targetDoorRotation - wardrobeDoorPivot.rotation.y) * 0.14;
+  }
 
   if (cableGrommetFlapPivot) {
     const targetRotation = cableGrommetFlapOpen ? -1.12 : 0;

@@ -291,41 +291,12 @@
 
     .wardrobe-handle-options {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 8px;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
     }
 
-    .wardrobe-handle-option {
-      min-width: 0;
-      min-height: 46px;
-      display: grid;
-      place-items: center;
-      padding: 8px;
-      border: 1px solid var(--line);
-      border-radius: 13px;
-      background: var(--surface-soft);
-      color: var(--ink);
-      font: inherit;
-      font-size: 10.5px;
-      font-weight: 750;
-      text-align: center;
-      cursor: pointer;
-      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
-    }
-
-    .wardrobe-handle-option:hover,
-    .wardrobe-handle-option:focus-visible {
-      transform: translateY(-1px);
-      border-color: rgba(47, 143, 91, 0.34);
-      box-shadow: 0 8px 18px rgba(29, 33, 38, 0.07);
-      outline: none;
-    }
-
-    .wardrobe-handle-option.is-active {
-      border-color: rgba(47, 143, 91, 0.58);
-      background: linear-gradient(145deg, #f9fffb, var(--accent-soft));
-      box-shadow: inset 0 0 0 1px rgba(47, 143, 91, 0.10);
-    }
+    /* Kolory uchwytu korzystają z dokładnie tego samego wyglądu,
+       obszaru klikalnego i znacznika wyboru co kolor stelaża biurka. */
 
 
 
@@ -910,9 +881,18 @@
     <section class="config-section" aria-labelledby="wardrobe-handle-title">
       <h2 class="panel-title" id="wardrobe-handle-title">Kolor uchwytu</h2>
       <div class="wardrobe-handle-options" role="radiogroup" aria-label="Kolor uchwytu">
-        <button class="wardrobe-handle-option is-active" type="button" data-wardrobe-handle="gray" role="radio" aria-checked="true">Szary</button>
-        <button class="wardrobe-handle-option" type="button" data-wardrobe-handle="white" role="radio" aria-checked="false">Biały</button>
-        <button class="wardrobe-handle-option" type="button" data-wardrobe-handle="black" role="radio" aria-checked="false">Czarny</button>
+        <button class="side-option wardrobe-handle-option is-active" type="button" data-wardrobe-handle="gray" role="radio" aria-checked="true">
+          <span class="size-main">Szary</span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+        <button class="side-option wardrobe-handle-option" type="button" data-wardrobe-handle="white" role="radio" aria-checked="false">
+          <span class="size-main">Biały</span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+        <button class="side-option wardrobe-handle-option" type="button" data-wardrobe-handle="black" role="radio" aria-checked="false">
+          <span class="size-main">Czarny</span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
       </div>
     </section>
   </aside>
@@ -938,6 +918,6 @@
     </span>
   </aside>
 
-  <script type="module" src="./main.js?v=20260801-wardrobe-v12"></script>
+  <script type="module" src="./main.js?v=20260801-wardrobe-v13"></script>
 </body>
 </html>
