@@ -2538,10 +2538,12 @@ async function generateOfferPdf() {
       minute: '2-digit'
     });
 
+    // Oferta ma teraz dwie strony:
+    // 1. konfiguracja i wycena (wcześniej ostatnia strona),
+    // 2. rzuty biurka.
     pageCanvases = [
-      createOfferCoverPage(views, generatedAt),
-      createOfferViewsPage(views),
-      createOfferPricingPage(views, generatedAt)
+      createOfferPricingPage(views, generatedAt),
+      createOfferViewsPage(views)
     ];
 
     const datePart = new Date().toISOString().slice(0, 10);
