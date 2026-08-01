@@ -956,6 +956,8 @@ const TOP_BAND_SURCHARGES = {
   180: 42.87
 };
 
+const CABLE_GROMMET_SURCHARGE = 58.89;
+
 function formatPrice(value) {
   return new Intl.NumberFormat('pl-PL', {
     minimumFractionDigits: 2,
@@ -966,11 +968,14 @@ function formatPrice(value) {
 function updatePriceInterface(topWidth) {
   const sizeSurcharge = SIZE_SURCHARGES[topWidth] ?? 0;
   const bandSurcharge = selectedTopBand ? (TOP_BAND_SURCHARGES[topWidth] ?? 0) : 0;
+  const cableGrommetSurcharge = selectedCableGrommet ? CABLE_GROMMET_SURCHARGE : 0;
   const priceElement = document.querySelector('#catalog-price');
 
   if (!priceElement) return;
 
-  priceElement.textContent = `${formatPrice(BASE_PRICE + sizeSurcharge + bandSurcharge)} zł brutto`;
+  priceElement.textContent = `${formatPrice(
+    BASE_PRICE + sizeSurcharge + bandSurcharge + cableGrommetSurcharge
+  )} zł brutto`;
 }
 
 function updateSizeInterface(topWidth) {
@@ -1104,6 +1109,7 @@ function selectCableGrommet(enabled) {
   controls.target.x = 0;
   controls.update();
   updateCableGrommetInterface(selectedCableGrommet);
+  updatePriceInterface(selectedTopWidth);
 }
 
 function selectDeskWidth(topWidth) {
@@ -1982,7 +1988,8 @@ function getCurrentPriceBreakdown() {
   const bandSurcharge = selectedTopBand
     ? (TOP_BAND_SURCHARGES[selectedTopWidth] ?? 0)
     : 0;
-  const total = BASE_PRICE + sizeSurcharge + bandSurcharge;
+  const cableGrommetSurcharge = selectedCableGrommet ? CABLE_GROMMET_SURCHARGE : 0;
+  const total = BASE_PRICE + sizeSurcharge + bandSurcharge + cableGrommetSurcharge;
 
   const items = [
     {
@@ -2004,6 +2011,14 @@ function getCurrentPriceBreakdown() {
     items.push({
       label: 'Opaska blatu',
       value: bandSurcharge,
+      kind: 'surcharge'
+    });
+  }
+
+  if (selectedCableGrommet) {
+    items.push({
+      label: 'Przepust kablowy',
+      value: cableGrommetSurcharge,
       kind: 'surcharge'
     });
   }
