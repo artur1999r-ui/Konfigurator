@@ -408,29 +408,15 @@ function clearGroupGeometry(group) {
 }
 
 
-function addTopBoardWithoutHole(topWidth, materials) {
-  addBoard({
-    name: `Blat ${topWidth} cm`,
-    size: new THREE.Vector3(topWidth, TOP_THICKNESS, TOP_DEPTH),
-    position: new THREE.Vector3(0, topCenterY, topCenterZ),
-    parent: configurableAssembly,
-    materials
-  });
-}
-
-function addTopBoardWithHole(topWidth, materials) {
+function addTopBoard(topWidth, materials, withCableHole) {
   const leftEdge = -topWidth / 2;
   const rightEdge = topWidth / 2;
   const backEdge = -TOP_DEPTH / 2;
   const frontEdge = TOP_DEPTH / 2;
 
-  const holeLeft = cableGrommetPosition.x - CABLE_CUTOUT_WIDTH / 2;
-  const holeRight = cableGrommetPosition.x + CABLE_CUTOUT_WIDTH / 2;
-  const holeBack = cableGrommetPosition.z - CABLE_CUTOUT_DEPTH / 2;
-  const holeFront = cableGrommetPosition.z + CABLE_CUTOUT_DEPTH / 2;
-
-  // Jedna geometria z prawdziwym otworem. Dzięki temu nie ma łączeń
-  // czterech osobnych fragmentów ani linii przesuwających się z przepustem.
+  // Blat bez przepustu i blat z przepustem korzystają od teraz z dokładnie
+  // tej samej geometrii bazowej oraz identycznego mapowania UV. Dzięki temu
+  // włączenie przepustu nie obraca, nie skaluje i nie przesuwa tekstury.
   const shape = new THREE.Shape();
   shape.moveTo(leftEdge, backEdge);
   shape.lineTo(rightEdge, backEdge);
@@ -438,13 +424,20 @@ function addTopBoardWithHole(topWidth, materials) {
   shape.lineTo(leftEdge, frontEdge);
   shape.closePath();
 
-  const hole = new THREE.Path();
-  hole.moveTo(holeLeft, holeBack);
-  hole.lineTo(holeLeft, holeFront);
-  hole.lineTo(holeRight, holeFront);
-  hole.lineTo(holeRight, holeBack);
-  hole.closePath();
-  shape.holes.push(hole);
+  if (withCableHole) {
+    const holeLeft = cableGrommetPosition.x - CABLE_CUTOUT_WIDTH / 2;
+    const holeRight = cableGrommetPosition.x + CABLE_CUTOUT_WIDTH / 2;
+    const holeBack = cableGrommetPosition.z - CABLE_CUTOUT_DEPTH / 2;
+    const holeFront = cableGrommetPosition.z + CABLE_CUTOUT_DEPTH / 2;
+
+    const hole = new THREE.Path();
+    hole.moveTo(holeLeft, holeBack);
+    hole.lineTo(holeLeft, holeFront);
+    hole.lineTo(holeRight, holeFront);
+    hole.lineTo(holeRight, holeBack);
+    hole.closePath();
+    shape.holes.push(hole);
+  }
 
   const geometry = new THREE.ExtrudeGeometry(shape, {
     depth: TOP_THICKNESS,
@@ -454,11 +447,10 @@ function addTopBoardWithHole(topWidth, materials) {
   });
 
   // Shape jest rysowany w płaszczyźnie XY, a blat leży w XZ.
-  // Obrót układa górną powierzchnię poziomo i zostawia grubość w osi Y.
+  // Po obrocie grubość geometrii biegnie w osi Y.
   geometry.rotateX(Math.PI / 2);
 
-  // Ciągłe UV na całym blacie — tekstura nie zaczyna się od nowa
-  // przy krawędziach otworu, więc nie powstają widoczne szwy.
+  // Stałe mapowanie UV niezależne od tego, czy w blacie jest otwór.
   const position = geometry.attributes.position;
   const normal = geometry.attributes.normal;
   const uv = new Float32Array(position.count * 2);
@@ -498,13 +490,14 @@ function addTopBoardWithHole(topWidth, materials) {
   const capMaterial = materials[2];
   const sideMaterial = materials[0];
   const mesh = new THREE.Mesh(geometry, [capMaterial, sideMaterial]);
-  mesh.name = `Blat ${topWidth} cm — z otworem`;
+  mesh.name = withCableHole
+    ? `Blat ${topWidth} cm — z otworem`
+    : `Blat ${topWidth} cm`;
   mesh.position.set(0, HEIGHT + TOP_THICKNESS, 0);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   configurableAssembly.add(mesh);
 
-  // Tylko rzeczywiste krawędzie zewnętrzne i krawędzie otworu.
   const edges = new THREE.LineSegments(
     new THREE.EdgesGeometry(geometry, 20),
     edgeMaterial
@@ -512,6 +505,14 @@ function addTopBoardWithHole(topWidth, materials) {
   edges.name = `${mesh.name} — krawędzie`;
   edges.position.copy(mesh.position);
   configurableAssembly.add(edges);
+}
+
+function addTopBoardWithoutHole(topWidth, materials) {
+  addTopBoard(topWidth, materials, false);
+}
+
+function addTopBoardWithHole(topWidth, materials) {
+  addTopBoard(topWidth, materials, true);
 }
 
 function getCableGrommetForbiddenRectangles(topWidth) {
