@@ -1274,6 +1274,14 @@ const GIZMO_SIZE = 160;
 const GIZMO_MARGIN = 16;
 const GIZMO_DRAG_SPEED = 0.009;
 
+// Kostka widoku działa wyłącznie w układzie komputerowym.
+// Sprawdzamy szerokość przez tę samą granicę, której używa CSS mobilny.
+const desktopGizmoMedia = window.matchMedia('(min-width: 761px)');
+
+function isGizmoEnabled() {
+  return desktopGizmoMedia.matches;
+}
+
 let cameraTransition = null;
 let gizmoDragging = false;
 let gizmoPointerId = null;
@@ -1340,6 +1348,8 @@ function getGizmoRect() {
 }
 
 function isInsideGizmo(clientX, clientY) {
+  if (!isGizmoEnabled()) return false;
+
   const canvasRect = renderer.domElement.getBoundingClientRect();
   const gizmoRect = getGizmoRect();
   const x = clientX - canvasRect.left;
@@ -1372,6 +1382,8 @@ function rotateCameraFromGizmo(deltaX, deltaY) {
 }
 
 function selectGizmoFace(clientX, clientY) {
+  if (!isGizmoEnabled()) return;
+
   const canvasRect = renderer.domElement.getBoundingClientRect();
   const gizmoRect = getGizmoRect();
   const x = clientX - canvasRect.left;
@@ -1415,7 +1427,7 @@ function selectGizmoFace(clientX, clientY) {
 renderer.domElement.addEventListener(
   'pointerdown',
   (event) => {
-    if (!isInsideGizmo(event.clientX, event.clientY)) return;
+    if (!isGizmoEnabled() || !isInsideGizmo(event.clientX, event.clientY)) return;
 
     event.preventDefault();
     event.stopPropagation();
@@ -2524,6 +2536,15 @@ function onResize() {
 
 window.addEventListener('resize', onResize);
 
+desktopGizmoMedia.addEventListener?.('change', (event) => {
+  if (event.matches || !gizmoDragging) return;
+
+  gizmoDragging = false;
+  gizmoPointerId = null;
+  controls.enabled = true;
+  renderer.domElement.style.cursor = 'default';
+});
+
 if ('ResizeObserver' in window) {
   const appResizeObserver = new ResizeObserver(onResize);
   appResizeObserver.observe(app);
@@ -2537,6 +2558,11 @@ function renderMainScene() {
 }
 
 function renderGizmo() {
+  if (!isGizmoEnabled()) {
+    renderer.setScissorTest(false);
+    return;
+  }
+
   gizmoCube.quaternion.copy(camera.quaternion).invert();
   gizmoEdges.quaternion.copy(gizmoCube.quaternion);
 
