@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Biurko 3D</title>
+  <title>Konfigurator produktów</title>
 
   <style>
     :root {
@@ -427,10 +427,149 @@
       letter-spacing: -0.025em;
     }
 
+
+    /* =======================================================
+       EKRAN STARTOWY I NAWIGACJA PRODUKTÓW
+       ======================================================= */
+    .product-start {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(180px, 280px));
+      place-content: center;
+      gap: 22px;
+      padding: 24px;
+      background: #eef1f4;
+      transition: opacity 180ms ease, visibility 180ms ease;
+    }
+
+    .product-choice {
+      min-height: 150px;
+      padding: 24px;
+      border: 1px solid rgba(26, 31, 37, 0.10);
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.94);
+      color: var(--ink);
+      box-shadow:
+        0 24px 70px rgba(26, 30, 35, 0.12),
+        0 4px 16px rgba(26, 30, 35, 0.05);
+      font: inherit;
+      font-size: clamp(24px, 3vw, 34px);
+      font-weight: 780;
+      letter-spacing: -0.03em;
+      cursor: pointer;
+      transition:
+        transform 170ms ease,
+        border-color 170ms ease,
+        box-shadow 170ms ease,
+        background 170ms ease;
+    }
+
+    .product-choice:hover,
+    .product-choice:focus-visible {
+      transform: translateY(-3px);
+      border-color: rgba(47, 143, 91, 0.48);
+      background: linear-gradient(145deg, #ffffff, #edf8f1);
+      box-shadow:
+        0 30px 80px rgba(26, 30, 35, 0.16),
+        0 8px 24px rgba(47, 143, 91, 0.10);
+      outline: none;
+    }
+
+    body:not(.route-start) .product-start {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    body.route-start #app,
+    body.route-start .config-panel,
+    body.route-start .price-card,
+    body.route-start .product-back-button {
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .product-back-button {
+      position: fixed;
+      z-index: 45;
+      top: 18px;
+      left: calc(var(--panel-width) + 32px);
+      min-height: 42px;
+      padding: 0 15px;
+      border: 1px solid rgba(255, 255, 255, 0.76);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.90);
+      color: var(--ink);
+      box-shadow: 0 10px 28px rgba(26, 30, 35, 0.10);
+      font: inherit;
+      font-size: 13px;
+      font-weight: 740;
+      cursor: pointer;
+      backdrop-filter: blur(14px) saturate(120%);
+      -webkit-backdrop-filter: blur(14px) saturate(120%);
+      transition: transform 150ms ease, border-color 150ms ease;
+    }
+
+    .product-back-button:hover,
+    .product-back-button:focus-visible {
+      transform: translateY(-1px);
+      border-color: rgba(47, 143, 91, 0.45);
+      outline: none;
+    }
+
+    body.route-wardrobe .config-panel,
+    body.route-wardrobe .price-card {
+      display: none;
+    }
+
+    body.route-wardrobe .product-back-button {
+      left: 18px;
+    }
+
     @media (max-width: 760px) {
       :root {
         --panel-width: calc(100vw - 24px);
         --mobile-viewer-height: clamp(280px, 42svh, 390px);
+      }
+
+
+      .product-start {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
+        padding: 18px;
+      }
+
+      .product-choice {
+        width: min(100%, 360px);
+        min-height: 120px;
+        justify-self: center;
+        border-radius: 20px;
+        font-size: 27px;
+      }
+
+      .product-back-button,
+      body.route-wardrobe .product-back-button {
+        top: 12px;
+        left: 12px;
+        min-height: 38px;
+        padding: 0 12px;
+      }
+
+      body.route-start,
+      body.route-wardrobe {
+        height: 100%;
+        min-height: 100%;
+        overflow: hidden;
+      }
+
+      body.route-wardrobe #app {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        box-shadow: none;
       }
 
       html,
@@ -514,10 +653,17 @@
   }
   </script>
 </head>
-<body>
+<body class="route-start">
+  <main class="product-start" id="product-start" aria-label="Wybierz produkt">
+    <button class="product-choice" type="button" data-product-route="desk">Biurko</button>
+    <button class="product-choice" type="button" data-product-route="wardrobe">Szafa</button>
+  </main>
+
+  <button class="product-back-button" id="product-back-button" type="button" aria-label="Wróć do wyboru produktu">← Produkty</button>
+
   <div id="app"></div>
 
-  <aside class="config-panel" aria-label="Konfiguracja biurka">
+  <aside class="config-panel" data-product-ui="desk" aria-label="Konfiguracja biurka">
     <section class="config-section" aria-labelledby="size-title">
       <h2 class="panel-title" id="size-title">Rozmiar</h2>
       <div class="size-options" role="radiogroup" aria-label="Rozmiar biurka">
@@ -647,7 +793,7 @@
     </section>
   </aside>
 
-  <aside class="price-card" aria-live="polite">
+  <aside class="price-card" data-product-ui="desk" aria-live="polite">
     <button
       class="pdf-offer-button"
       id="generate-offer-pdf"
@@ -668,6 +814,6 @@
     </span>
   </aside>
 
-  <script type="module" src="./main.js?v=20260801-pdf-pages-v9"></script>
+  <script type="module" src="./main.js?v=20260801-portfolio-v10"></script>
 </body>
 </html>

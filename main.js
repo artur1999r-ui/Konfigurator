@@ -49,6 +49,11 @@ const FRAME_PROFILE = 4.0; // 4 x 4 cm
 
 const app = document.querySelector('#app');
 
+// Aktywny widok portfolio: ekran startowy, konfigurator biurka lub szafy.
+// Szafa jest na razie pustym środowiskiem 3D z podłogą, kamerą i kostką widoku.
+let activeProduct = 'start';
+
+
 // ============================================================
 // SCENA
 // ============================================================
@@ -1354,7 +1359,7 @@ const GIZMO_DRAG_SPEED = 0.009;
 const desktopGizmoMedia = window.matchMedia('(min-width: 761px)');
 
 function isGizmoEnabled() {
-  return desktopGizmoMedia.matches;
+  return desktopGizmoMedia.matches && activeProduct !== 'start';
 }
 
 let cameraTransition = null;
@@ -2608,6 +2613,80 @@ document
   .querySelector('#generate-offer-pdf')
   ?.addEventListener('click', generateOfferPdf);
 
+
+// ============================================================
+// PORTFOLIO PRODUKTÓW / PROSTE ROUTING HASH
+// ============================================================
+const productStart = document.querySelector('#product-start');
+const productBackButton = document.querySelector('#product-back-button');
+const productRouteButtons = document.querySelectorAll('[data-product-route]');
+
+function getProductFromHash() {
+  const hash = window.location.hash.toLowerCase();
+  if (hash === '#biurko') return 'desk';
+  if (hash === '#szafa') return 'wardrobe';
+  return 'start';
+}
+
+function setProductRoute(product) {
+  const nextProduct = ['desk', 'wardrobe'].includes(product) ? product : 'start';
+  activeProduct = nextProduct;
+
+  document.body.classList.remove('route-start', 'route-desk', 'route-wardrobe');
+  document.body.classList.add(`route-${nextProduct}`);
+
+  // Biurko zachowujemy w pamięci i tylko ukrywamy, gdy oglądana jest szafa.
+  // Dzięki temu powrót do biurka nie resetuje wybranej konfiguracji.
+  model.visible = nextProduct === 'desk';
+  cablePositionIndicator.classList.remove('is-visible');
+
+  document.title =
+    nextProduct === 'desk'
+      ? 'Biurko 3D'
+      : nextProduct === 'wardrobe'
+        ? 'Szafa 3D'
+        : 'Konfigurator produktów';
+
+  productStart?.setAttribute('aria-hidden', String(nextProduct !== 'start'));
+  productBackButton?.setAttribute('aria-hidden', String(nextProduct === 'start'));
+
+  // Po zmianie produktu wracamy do początku dokumentu i dopasowujemy renderer
+  // do aktualnego układu (pełny ekran dla szafy, stały podgląd dla biurka mobilnie).
+  window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  requestAnimationFrame(() => {
+    onResize();
+    requestAnimationFrame(onResize);
+  });
+}
+
+function navigateToProduct(product) {
+  const targetHash = product === 'desk' ? '#biurko' : product === 'wardrobe' ? '#szafa' : '';
+
+  if (targetHash) {
+    if (window.location.hash === targetHash) {
+      setProductRoute(product);
+    } else {
+      window.location.hash = targetHash;
+    }
+    return;
+  }
+
+  if (window.location.hash) {
+    window.location.hash = '';
+  } else {
+    setProductRoute('start');
+  }
+}
+
+productRouteButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    navigateToProduct(button.dataset.productRoute);
+  });
+});
+
+productBackButton?.addEventListener('click', () => navigateToProduct('start'));
+window.addEventListener('hashchange', () => setProductRoute(getProductFromHash()));
+
 // ============================================================
 // RENDEROWANIE
 // ============================================================
@@ -2684,5 +2763,7 @@ function animate(now = 0) {
   renderMainScene();
   renderGizmo();
 }
+
+setProductRoute(getProductFromHash());
 
 animate();
