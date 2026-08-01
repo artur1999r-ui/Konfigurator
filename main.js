@@ -48,9 +48,11 @@ const WARDROBE_BOARD = 1.8; // płyta melaminowana 18 mm
 const WARDROBE_HDF_BACK = 0.3; // płyta HDF 3 mm
 const WARDROBE_SHELF_COUNT = 4;
 const WARDROBE_HANDLE_LENGTH = 10; // L = 100 mm
+const WARDROBE_BASE_PRICE = 1130;
 const WARDROBE_BACK_SURCHARGE = 200;
 let selectedWardrobeBack = 'hdf';
 let selectedWardrobeHandle = 'gray';
+let selectedWardrobeFinish = 'white';
 
 // Układ osi:
 // X — szerokość
@@ -415,7 +417,7 @@ function rebuildWardrobeBack() {
     ? WARDROBE_BOARD
     : WARDROBE_HDF_BACK;
   const materials = selectedWardrobeBack === 'melamine'
-    ? finishMaterialSets.white
+    ? finishMaterialSets[selectedWardrobeFinish]
     : wardrobeHdfMaterial;
 
   // Plecy mieszczą się w nominalnej głębokości 40 cm.
@@ -453,7 +455,7 @@ function buildWardrobeModel() {
   const carcassCenterZ = -WARDROBE_BOARD / 2;
   const innerHeight = WARDROBE_HEIGHT - WARDROBE_BOARD * 2;
   const innerWidth = WARDROBE_WIDTH - WARDROBE_BOARD * 2;
-  const bodyMaterials = finishMaterialSets.white;
+  const bodyMaterials = finishMaterialSets[selectedWardrobeFinish];
 
   addBoard({
     name: 'Wieniec górny 18 mm',
@@ -1173,13 +1175,23 @@ function formatPrice(value) {
   }).format(value);
 }
 
-function updatePriceInterface(topWidth) {
+function updatePriceInterface(topWidth = selectedTopWidth) {
+  const priceElement = document.querySelector('#catalog-price');
+  if (!priceElement) return;
+
+  if (activeProduct === 'wardrobe') {
+    const backSurcharge = selectedWardrobeBack === 'melamine'
+      ? WARDROBE_BACK_SURCHARGE
+      : 0;
+    priceElement.textContent = `${formatPrice(
+      WARDROBE_BASE_PRICE + backSurcharge
+    )} zł brutto`;
+    return;
+  }
+
   const sizeSurcharge = SIZE_SURCHARGES[topWidth] ?? 0;
   const bandSurcharge = selectedTopBand ? (TOP_BAND_SURCHARGES[topWidth] ?? 0) : 0;
   const cableGrommetSurcharge = selectedCableGrommet ? CABLE_GROMMET_SURCHARGE : 0;
-  const priceElement = document.querySelector('#catalog-price');
-
-  if (!priceElement) return;
 
   priceElement.textContent = `${formatPrice(
     BASE_PRICE + sizeSurcharge + bandSurcharge + cableGrommetSurcharge
@@ -1271,6 +1283,12 @@ function selectFinish(target, finish) {
     selectedHelperFinish = finish;
     applyHelperFinish();
     updateFinishInterface('helper', selectedHelperFinish);
+  }
+
+  if (target === 'wardrobe') {
+    selectedWardrobeFinish = finish;
+    buildWardrobeModel();
+    updateFinishInterface('wardrobe', selectedWardrobeFinish);
   }
 }
 
@@ -1402,6 +1420,7 @@ function selectWardrobeBack(backType) {
   selectedWardrobeBack = backType;
   rebuildWardrobeBack();
   updateWardrobeBackInterface(selectedWardrobeBack);
+  updatePriceInterface();
 }
 
 function selectWardrobeHandle(handleColor) {
@@ -1425,6 +1444,7 @@ document.querySelectorAll('.wardrobe-handle-option').forEach((button) => {
 
 updateWardrobeBackInterface(selectedWardrobeBack);
 updateWardrobeHandleInterface(selectedWardrobeHandle);
+updateFinishInterface('wardrobe', selectedWardrobeFinish);
 
 // ============================================================
 // PRZEPUST KABLOWY — przeciąganie i otwieranie klapki
@@ -1909,6 +1929,12 @@ const FRAME_FINISH_LABELS = {
   white: 'Biały'
 };
 
+const WARDROBE_HANDLE_LABELS = {
+  gray: 'Szary',
+  white: 'Biały',
+  black: 'Czarny'
+};
+
 const PDF_PAGE_WIDTH = 1684;
 const PDF_PAGE_HEIGHT = 1190;
 const PDF_GREEN = '#2f8f5b';
@@ -2237,6 +2263,32 @@ function saveGeneratedPdf(pdfBlob, filename, iosPreviewWindow = null) {
 }
 
 function getCurrentPriceBreakdown() {
+  if (activeProduct === 'wardrobe') {
+    const backSurcharge = selectedWardrobeBack === 'melamine'
+      ? WARDROBE_BACK_SURCHARGE
+      : 0;
+    const items = [
+      {
+        label: 'Cena bazowa szafy',
+        value: WARDROBE_BASE_PRICE,
+        kind: 'base'
+      }
+    ];
+
+    if (backSurcharge > 0) {
+      items.push({
+        label: 'Plecy - płyta melaminowana 18 mm',
+        value: backSurcharge,
+        kind: 'surcharge'
+      });
+    }
+
+    return {
+      items,
+      total: WARDROBE_BASE_PRICE + backSurcharge
+    };
+  }
+
   const sizeSurcharge = SIZE_SURCHARGES[selectedTopWidth] ?? 0;
   const bandSurcharge = selectedTopBand
     ? (TOP_BAND_SURCHARGES[selectedTopWidth] ?? 0)
@@ -2280,6 +2332,22 @@ function getCurrentPriceBreakdown() {
 }
 
 function getConfigurationRows() {
+  if (activeProduct === 'wardrobe') {
+    return [
+      ['Rozmiar', '40 × 40 × 189 cm'],
+      ['Kolor szafy', FINISH_LABELS[selectedWardrobeFinish] ?? selectedWardrobeFinish],
+      [
+        'Plecy',
+        selectedWardrobeBack === 'melamine'
+          ? 'Płyta melaminowana 18 mm'
+          : 'Płyta HDF 3 mm'
+      ],
+      ['Kolor uchwytu', WARDROBE_HANDLE_LABELS[selectedWardrobeHandle] ?? selectedWardrobeHandle],
+      ['Półki wewnętrzne', '4 szt.'],
+      ['Płyty korpusu i frontu', 'Płyta melaminowana 18 mm']
+    ];
+  }
+
   return [
     ['Rozmiar', `${selectedTopWidth} × 80 × 74 cm`],
     ['Pomocnik - strona', selectedHelperSide === 'left' ? 'Lewa' : 'Prawa'],
@@ -2394,8 +2462,9 @@ function drawImageContain(ctx, sourceCanvas, x, y, width, height, padding = 0) {
 }
 
 function getModelBoundsForPdf() {
-  model.updateMatrixWorld(true);
-  const box = new THREE.Box3().setFromObject(model);
+  const activeModel = activeProduct === 'wardrobe' ? wardrobeModel : model;
+  activeModel.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(activeModel);
   const center = box.getCenter(new THREE.Vector3());
   const size = box.getSize(new THREE.Vector3());
   return { box, center, size };
@@ -2597,7 +2666,7 @@ function createOfferCoverPage(views, generatedAt) {
 
 function createOfferViewsPage(views) {
   const { canvas, ctx } = createPdfCanvas();
-  drawPdfHeader(ctx, 'Rzuty biurka', 'Widoki bez perspektywy');
+  drawPdfHeader(ctx, activeProduct === 'wardrobe' ? 'Rzuty szafy' : 'Rzuty biurka', 'Widoki bez perspektywy');
 
   const cards = [
     ['Przód', views.front],
@@ -2724,6 +2793,13 @@ function createOfferPricingPage(views, generatedAt) {
   return canvas;
 }
 
+function getOfferFilename() {
+  const datePart = new Date().toISOString().slice(0, 10);
+  return activeProduct === 'wardrobe'
+    ? `oferta-szafa-40x40x189-${datePart}.pdf`
+    : `oferta-biurko-${selectedTopWidth}x80x74-${datePart}.pdf`;
+}
+
 function setPdfButtonLoading(loading) {
   const button = document.querySelector('#generate-offer-pdf');
   if (!button) return;
@@ -2793,14 +2869,13 @@ async function generateOfferPdf() {
 
     // Oferta ma teraz dwie strony:
     // 1. konfiguracja i wycena (wcześniej ostatnia strona),
-    // 2. rzuty biurka.
+    // 2. rzuty produktu.
     pageCanvases = [
       createOfferPricingPage(views, generatedAt),
       createOfferViewsPage(views)
     ];
 
-    const datePart = new Date().toISOString().slice(0, 10);
-    const filename = `oferta-biurko-${selectedTopWidth}x80x74-${datePart}.pdf`;
+    const filename = getOfferFilename();
 
     if (useNativePrint) {
       openPrintableOffer(pageCanvases, filename, previewWindow);
@@ -2821,8 +2896,7 @@ async function generateOfferPdf() {
     // okna wydruku zamiast kończyć działanie samym komunikatem błędu.
     if (pageCanvases.length) {
       try {
-        const datePart = new Date().toISOString().slice(0, 10);
-        const filename = `oferta-biurko-${selectedTopWidth}x80x74-${datePart}.pdf`;
+        const filename = getOfferFilename();
         openPrintableOffer(pageCanvases, filename, previewWindow);
         return;
       } catch (printError) {
@@ -2929,6 +3003,10 @@ function setProductRoute(product) {
 
   productStart?.setAttribute('aria-hidden', String(nextProduct !== 'start'));
   productBackButton?.setAttribute('aria-hidden', String(nextProduct === 'start'));
+
+  if (nextProduct !== 'start') {
+    updatePriceInterface(selectedTopWidth);
+  }
 
   // Po zmianie produktu wracamy do początku dokumentu i dopasowujemy renderer
   // do aktualnego układu mobilnego lub komputerowego.
