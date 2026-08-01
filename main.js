@@ -83,6 +83,71 @@ renderer.toneMappingExposure = 1.0;
 renderer.autoClear = false;
 app.appendChild(renderer.domElement);
 
+// Podczas przeciągania przepustu pokazujemy jego bieżące położenie
+// względem lewej i tylnej krawędzi blatu.
+const cablePositionIndicator = document.createElement('div');
+cablePositionIndicator.className = 'cable-position-indicator';
+cablePositionIndicator.setAttribute('aria-hidden', 'true');
+cablePositionIndicator.innerHTML = `
+  <strong>Położenie przepustu</strong>
+  <span data-cable-position-width></span>
+  <span data-cable-position-depth></span>
+`;
+app.appendChild(cablePositionIndicator);
+
+const cablePositionWidth = cablePositionIndicator.querySelector('[data-cable-position-width]');
+const cablePositionDepth = cablePositionIndicator.querySelector('[data-cable-position-depth]');
+const cableIndicatorWorldPosition = new THREE.Vector3();
+
+function formatCablePositionCm(value) {
+  return value.toFixed(1).replace('.', ',');
+}
+
+function updateCablePositionIndicator() {
+  if (!cableDragging || !selectedCableGrommet) {
+    cablePositionIndicator.classList.remove('is-visible');
+    return;
+  }
+
+  const fromLeft = cableGrommetPosition.x + selectedTopWidth / 2;
+  const fromBack = cableGrommetPosition.z + TOP_DEPTH / 2;
+
+  cablePositionWidth.textContent = `Szer.: ${formatCablePositionCm(fromLeft)} cm od lewej`;
+  cablePositionDepth.textContent = `Gł.: ${formatCablePositionCm(fromBack)} cm od tyłu`;
+
+  cablePositionIndicator.classList.add('is-visible');
+
+  // Etykieta podąża za przepustem w rzucie ekranu, ale jest odsunięta
+  // do góry, żeby na telefonie nie zasłaniał jej palec.
+  const rect = app.getBoundingClientRect();
+  cableIndicatorWorldPosition
+    .set(
+      cableGrommetPosition.x,
+      HEIGHT + TOP_THICKNESS + CABLE_GROMMET_HEIGHT + 1.2,
+      cableGrommetPosition.z
+    )
+    .project(camera);
+
+  const projectedX = (cableIndicatorWorldPosition.x * 0.5 + 0.5) * rect.width;
+  const projectedY = (-cableIndicatorWorldPosition.y * 0.5 + 0.5) * rect.height;
+  const badgeWidth = cablePositionIndicator.offsetWidth || 190;
+  const badgeHeight = cablePositionIndicator.offsetHeight || 66;
+  const margin = 10;
+
+  const left = THREE.MathUtils.clamp(
+    projectedX - badgeWidth / 2,
+    margin,
+    Math.max(margin, rect.width - badgeWidth - margin)
+  );
+  const top = THREE.MathUtils.clamp(
+    projectedY - badgeHeight - 24,
+    margin,
+    Math.max(margin, rect.height - badgeHeight - margin)
+  );
+
+  cablePositionIndicator.style.transform = `translate3d(${left}px, ${top}px, 0)`;
+}
+
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.06;
@@ -1151,6 +1216,7 @@ renderer.domElement.addEventListener('pointerdown', (event) => {
   controls.enabled = false;
   renderer.domElement.setPointerCapture(event.pointerId);
   renderer.domElement.style.cursor = 'grabbing';
+  updateCablePositionIndicator();
 }, true);
 
 renderer.domElement.addEventListener('pointermove', (event) => {
@@ -1175,6 +1241,7 @@ renderer.domElement.addEventListener('pointermove', (event) => {
 
   cableGrommetPosition.x = valid.x;
   cableGrommetPosition.z = valid.z;
+  updateCablePositionIndicator();
 
   // Otwór jest częścią geometrii blatu, więc podczas przesuwania
   // odbudowujemy blat wraz z wycięciem pod aktualną pozycją przepustu.
@@ -1207,6 +1274,7 @@ function finishCableInteraction(event) {
   cablePointerId = null;
   controls.enabled = true;
   renderer.domElement.style.cursor = 'default';
+  updateCablePositionIndicator();
 }
 
 renderer.domElement.addEventListener('pointerup', finishCableInteraction, true);
