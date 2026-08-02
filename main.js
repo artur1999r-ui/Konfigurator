@@ -48,6 +48,8 @@ const WARDROBE_BOARD = 1.8; // płyta melaminowana 18 mm
 const WARDROBE_HDF_BACK = 0.3; // płyta HDF 3 mm
 const WARDROBE_SHELF_COUNT = 4;
 const WARDROBE_HANDLE_LENGTH = 10; // L = 100 mm
+const WARDROBE_HINGE_COUNT = 3;
+const WARDROBE_HINGE_OPEN_ANGLE = THREE.MathUtils.degToRad(100);
 const WARDROBE_BASE_PRICE = 1130;
 const WARDROBE_BACK_SURCHARGE = 200;
 let selectedWardrobeBack = 'hdf';
@@ -355,6 +357,19 @@ const wardrobeHandleMaterials = {
   })
 };
 
+
+const wardrobeHingeMaterial = new THREE.MeshStandardMaterial({
+  color: 0xcac2b6,
+  roughness: 0.34,
+  metalness: 0.82
+});
+
+const wardrobeHingeAccentMaterial = new THREE.MeshStandardMaterial({
+  color: 0x8c867b,
+  roughness: 0.56,
+  metalness: 0.52
+});
+
 const model = new THREE.Group();
 scene.add(model);
 
@@ -451,6 +466,80 @@ function applyWardrobeHandleFinish() {
   wardrobeHandleMesh.material.needsUpdate = true;
 }
 
+function addWardrobeHinge(yPosition) {
+  if (!wardrobeDoorPivot) return;
+
+  const bodyInnerX = -WARDROBE_WIDTH / 2 + WARDROBE_BOARD;
+  const bodyMountZ = WARDROBE_DEPTH / 2 - WARDROBE_BOARD - 2.2;
+
+  const bodyPlate = new THREE.Mesh(
+    new THREE.BoxGeometry(0.22, 5.0, 2.9),
+    wardrobeHingeMaterial
+  );
+  bodyPlate.name = 'Płytka montażowa zawiasu';
+  bodyPlate.position.set(bodyInnerX + 0.11, yPosition, bodyMountZ);
+  bodyPlate.castShadow = true;
+  bodyPlate.receiveShadow = true;
+  wardrobeBodyGroup.add(bodyPlate);
+
+  const bodyPlateSpacer = new THREE.Mesh(
+    new THREE.BoxGeometry(0.82, 2.4, 1.2),
+    wardrobeHingeAccentMaterial
+  );
+  bodyPlateSpacer.position.set(bodyInnerX + 0.52, yPosition, bodyMountZ);
+  bodyPlateSpacer.castShadow = true;
+  bodyPlateSpacer.receiveShadow = true;
+  wardrobeBodyGroup.add(bodyPlateSpacer);
+
+  const doorCupPlate = new THREE.Mesh(
+    new THREE.BoxGeometry(3.4, 5.0, 0.18),
+    wardrobeHingeMaterial
+  );
+  doorCupPlate.name = 'Płytka drzwiowa zawiasu';
+  doorCupPlate.position.set(2.7, yPosition, -0.8);
+  doorCupPlate.castShadow = true;
+  doorCupPlate.receiveShadow = true;
+  wardrobeDoorPivot.add(doorCupPlate);
+
+  const cupGeometry = new THREE.CylinderGeometry(1.75, 1.75, 0.72, 24);
+  cupGeometry.rotateX(Math.PI / 2);
+  const hingeCup = new THREE.Mesh(cupGeometry, wardrobeHingeMaterial);
+  hingeCup.name = 'Puszka zawiasu 35 mm';
+  hingeCup.position.set(2.45, yPosition, -0.5);
+  hingeCup.castShadow = true;
+  hingeCup.receiveShadow = true;
+  wardrobeDoorPivot.add(hingeCup);
+
+  const hingeArm = new THREE.Mesh(
+    new THREE.BoxGeometry(4.6, 1.05, 1.05),
+    wardrobeHingeMaterial
+  );
+  hingeArm.name = 'Ramię zawiasu';
+  hingeArm.position.set(0.6, yPosition, -0.16);
+  hingeArm.castShadow = true;
+  hingeArm.receiveShadow = true;
+  wardrobeDoorPivot.add(hingeArm);
+
+  const hingeNeck = new THREE.Mesh(
+    new THREE.BoxGeometry(1.2, 2.4, 0.92),
+    wardrobeHingeAccentMaterial
+  );
+  hingeNeck.position.set(-1.15, yPosition, -0.16);
+  hingeNeck.castShadow = true;
+  hingeNeck.receiveShadow = true;
+  wardrobeDoorPivot.add(hingeNeck);
+
+  const hingePivot = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.28, 0.28, 2.2, 18),
+    wardrobeHingeAccentMaterial
+  );
+  hingePivot.rotation.z = Math.PI / 2;
+  hingePivot.position.set(-0.62, yPosition, -0.16);
+  hingePivot.castShadow = true;
+  hingePivot.receiveShadow = true;
+  wardrobeDoorPivot.add(hingePivot);
+}
+
 function buildWardrobeModel() {
   clearGeneratedGroup(wardrobeBodyGroup);
 
@@ -530,7 +619,7 @@ function buildWardrobeModel() {
   wardrobeDoorPivot = new THREE.Group();
   wardrobeDoorPivot.name = 'Zawias drzwi szafy';
   wardrobeDoorPivot.position.set(hingeX, 0, doorCenterZ);
-  wardrobeDoorPivot.rotation.y = wardrobeDoorOpen ? -Math.PI * 0.56 : 0;
+  wardrobeDoorPivot.rotation.y = wardrobeDoorOpen ? -WARDROBE_HINGE_OPEN_ANGLE : 0;
   wardrobeBodyGroup.add(wardrobeDoorPivot);
 
   addBoard({
@@ -574,6 +663,11 @@ function buildWardrobeModel() {
   wardrobeHandleHitMesh.position.copy(wardrobeHandleMesh.position);
   wardrobeHandleHitMesh.userData.isWardrobeHandleHitArea = true;
   wardrobeDoorPivot.add(wardrobeHandleHitMesh);
+
+  const hingeOffsets = [26, WARDROBE_HEIGHT / 2, WARDROBE_HEIGHT - 26];
+  hingeOffsets.slice(0, WARDROBE_HINGE_COUNT).forEach((hingeY) => {
+    addWardrobeHinge(hingeY);
+  });
 
   rebuildWardrobeBack();
   applyWardrobeHandleFinish();
@@ -2445,6 +2539,7 @@ function getConfigurationRows() {
           : 'Płyta HDF 3 mm'
       ],
       ['Kolor uchwytu', WARDROBE_HANDLE_LABELS[selectedWardrobeHandle] ?? selectedWardrobeHandle],
+      ['Zawiasy', 'Puszkowe 35 mm, nakładane, 100°'],
       ['Półki wewnętrzne', '4 szt.'],
       ['Płyty korpusu i frontu', 'Płyta melaminowana 18 mm']
     ];
@@ -3214,7 +3309,7 @@ function animate(now = 0) {
   updateCameraTransition(now);
 
   if (wardrobeDoorPivot) {
-    const targetDoorRotation = wardrobeDoorOpen ? -Math.PI * 0.56 : 0;
+    const targetDoorRotation = wardrobeDoorOpen ? -WARDROBE_HINGE_OPEN_ANGLE : 0;
     wardrobeDoorPivot.rotation.y +=
       (targetDoorRotation - wardrobeDoorPivot.rotation.y) * 0.14;
   }
