@@ -1,0 +1,923 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Konfigurator produktów</title>
+
+  <style>
+    :root {
+      --panel-width: 280px;
+      --ink: #1c2025;
+      --line: rgba(26, 31, 37, 0.08);
+      --surface: rgba(255, 255, 255, 0.90);
+      --surface-soft: rgba(247, 247, 245, 0.94);
+      --accent: #2f8f5b;
+      --accent-soft: #e5f4eb;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #eef1f4;
+    }
+
+    body {
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
+      color: var(--ink);
+    }
+
+    #app {
+      position: fixed;
+      inset: 0;
+    }
+
+    canvas {
+      display: block;
+      touch-action: none;
+    }
+
+    .config-panel {
+      position: fixed;
+      z-index: 30;
+      top: 18px;
+      left: 18px;
+      width: var(--panel-width);
+      max-height: calc(100vh - 36px);
+      overflow-y: auto;
+      padding: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.78);
+      border-radius: 20px;
+      background: var(--surface);
+      box-shadow:
+        0 24px 70px rgba(26, 30, 35, 0.15),
+        0 4px 16px rgba(26, 30, 35, 0.06);
+      backdrop-filter: blur(18px) saturate(125%);
+      -webkit-backdrop-filter: blur(18px) saturate(125%);
+    }
+
+    .panel-title {
+      margin: 0 0 14px;
+      font-size: 18px;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+    }
+
+    .size-options {
+      display: grid;
+      gap: 9px;
+    }
+
+    .config-section + .config-section {
+      margin-top: 20px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+    }
+
+    .side-options,
+    .finish-options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+    }
+
+    .finish-options {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: stretch;
+    }
+
+    .size-option,
+    .side-option {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 12px;
+      min-height: 58px;
+      padding: 11px 12px 11px 14px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: var(--surface-soft);
+      color: var(--ink);
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+      transition:
+        transform 160ms ease,
+        border-color 160ms ease,
+        background 160ms ease,
+        box-shadow 160ms ease;
+    }
+
+    .size-option:hover,
+    .side-option:hover {
+      transform: translateY(-1px);
+      border-color: rgba(47, 143, 91, 0.34);
+      box-shadow: 0 8px 18px rgba(29, 33, 38, 0.07);
+    }
+
+    .size-option.is-active,
+    .side-option.is-active {
+      border-color: rgba(47, 143, 91, 0.58);
+      background: linear-gradient(145deg, #f9fffb, var(--accent-soft));
+      box-shadow: inset 0 0 0 1px rgba(47, 143, 91, 0.10);
+    }
+
+    .size-main {
+      display: block;
+      font-size: 14px;
+      font-weight: 760;
+      letter-spacing: -0.01em;
+    }
+
+    .size-extra {
+      display: block;
+      margin-top: 3px;
+      color: #28784d;
+      font-size: 11.5px;
+      font-weight: 700;
+    }
+
+    .option-check {
+      position: relative;
+      width: 22px;
+      height: 22px;
+      border: 1.5px solid rgba(35, 39, 44, 0.22);
+      border-radius: 50%;
+      background: #fff;
+      transition: 160ms ease;
+    }
+
+    .size-option.is-active .option-check,
+    .side-option.is-active .option-check {
+      border-color: var(--accent);
+      background: var(--accent);
+      box-shadow: 0 0 0 4px rgba(47, 143, 91, 0.12);
+    }
+
+    .size-option.is-active .option-check::after,
+    .side-option.is-active .option-check::after {
+      content: "";
+      position: absolute;
+      left: 6px;
+      top: 3px;
+      width: 6px;
+      height: 10px;
+      border: solid #fff;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+
+
+    .finish-option {
+      width: 100%;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: var(--surface-soft);
+      color: var(--ink);
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+      transition:
+        transform 160ms ease,
+        border-color 160ms ease,
+        background 160ms ease,
+        box-shadow 160ms ease;
+    }
+
+    .finish-option:hover {
+      transform: translateY(-1px);
+      border-color: rgba(47, 143, 91, 0.34);
+      box-shadow: 0 8px 18px rgba(29, 33, 38, 0.07);
+    }
+
+    .finish-option.is-active {
+      border-color: rgba(47, 143, 91, 0.58);
+      background: linear-gradient(145deg, #f9fffb, var(--accent-soft));
+      box-shadow: inset 0 0 0 1px rgba(47, 143, 91, 0.10);
+    }
+
+    .finish-preview {
+      display: block;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      margin-bottom: 8px;
+      border-radius: 9px;
+      background-position: center;
+      background-size: cover;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.10);
+    }
+
+    .finish-label {
+      display: flex;
+      margin-top: auto;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 750;
+      line-height: 1.2;
+    }
+
+    .finish-check {
+      position: relative;
+      width: 16px;
+      height: 16px;
+      flex: 0 0 16px;
+      border: 1.5px solid rgba(35, 39, 44, 0.22);
+      border-radius: 50%;
+      background: #fff;
+    }
+
+    .finish-option.is-active .finish-check {
+      border-color: var(--accent);
+      background: var(--accent);
+      box-shadow: 0 0 0 3px rgba(47, 143, 91, 0.12);
+    }
+
+    .finish-option.is-active .finish-check::after {
+      content: "";
+      position: absolute;
+      left: 4px;
+      top: 1px;
+      width: 4px;
+      height: 8px;
+      border: solid #fff;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+
+
+    .wardrobe-size-card {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 12px;
+      min-height: 58px;
+      padding: 11px 12px 11px 14px;
+      border: 1px solid rgba(47, 143, 91, 0.58);
+      border-radius: 13px;
+      background: linear-gradient(145deg, #f9fffb, var(--accent-soft));
+      box-shadow: inset 0 0 0 1px rgba(47, 143, 91, 0.10);
+    }
+
+    .wardrobe-size-card .option-check {
+      border-color: var(--accent);
+      background: var(--accent);
+      box-shadow: 0 0 0 4px rgba(47, 143, 91, 0.12);
+    }
+
+    .wardrobe-size-card .option-check::after {
+      content: "";
+      position: absolute;
+      left: 6px;
+      top: 3px;
+      width: 6px;
+      height: 10px;
+      border: solid #fff;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+
+    .wardrobe-handle-options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+    }
+
+    /* Kolory uchwytu korzystają z dokładnie tego samego wyglądu,
+       obszaru klikalnego i znacznika wyboru co kolor stelaża biurka. */
+
+
+
+    .price-card {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 30;
+      min-width: 286px;
+      display: flex;
+      align-items: flex-end;
+      gap: 14px;
+      padding: 14px 18px 14px 14px;
+      border: 1px solid rgba(255, 255, 255, 0.78);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.90);
+      box-shadow:
+        0 20px 55px rgba(26, 30, 35, 0.13),
+        0 4px 14px rgba(26, 30, 35, 0.05);
+      backdrop-filter: blur(18px) saturate(125%);
+      -webkit-backdrop-filter: blur(18px) saturate(125%);
+    }
+
+    .price-content {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .cable-position-indicator {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 26;
+      min-width: 188px;
+      display: grid;
+      gap: 3px;
+      padding: 9px 11px;
+      border: 1px solid rgba(255, 255, 255, 0.74);
+      border-radius: 11px;
+      background: rgba(29, 33, 38, 0.91);
+      color: #fff;
+      box-shadow: 0 10px 28px rgba(18, 22, 26, 0.24);
+      font-size: 11px;
+      line-height: 1.25;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transform: translate3d(-999px, -999px, 0);
+      transition: opacity 120ms ease, visibility 120ms ease;
+      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
+    }
+
+    .cable-position-indicator.is-visible {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .cable-position-indicator strong {
+      margin-bottom: 2px;
+      color: #dff5e8;
+      font-size: 11px;
+      letter-spacing: 0.02em;
+    }
+
+    .pdf-offer-button {
+      position: relative;
+      width: 46px;
+      height: 46px;
+      flex: 0 0 46px;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      border: 1px solid rgba(47, 143, 91, 0.22);
+      border-radius: 13px;
+      background: linear-gradient(145deg, #f9fffb, #e5f4eb);
+      color: #28784d;
+      cursor: pointer;
+      transition:
+        transform 160ms ease,
+        border-color 160ms ease,
+        box-shadow 160ms ease,
+        background 160ms ease;
+    }
+
+    .pdf-offer-button:hover,
+    .pdf-offer-button:focus-visible {
+      transform: translateY(-1px);
+      border-color: rgba(47, 143, 91, 0.55);
+      box-shadow: 0 9px 22px rgba(37, 102, 68, 0.16);
+      outline: none;
+    }
+
+    .pdf-offer-button svg {
+      width: 23px;
+      height: 23px;
+      stroke: currentColor;
+    }
+
+    .pdf-offer-button.is-loading {
+      pointer-events: none;
+      color: transparent;
+    }
+
+    .pdf-offer-button.is-loading::after {
+      content: "";
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(47, 143, 91, 0.22);
+      border-top-color: #2f8f5b;
+      border-radius: 50%;
+      animation: pdf-spin 700ms linear infinite;
+    }
+
+    .pdf-tooltip {
+      position: absolute;
+      left: 0;
+      bottom: calc(100% + 10px);
+      z-index: 40;
+      padding: 8px 10px;
+      border-radius: 9px;
+      background: #202429;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1;
+      white-space: nowrap;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(4px);
+      pointer-events: none;
+      transition: opacity 140ms ease, transform 140ms ease, visibility 140ms ease;
+    }
+
+    .pdf-tooltip::after {
+      content: "";
+      position: absolute;
+      left: 17px;
+      top: 100%;
+      border: 6px solid transparent;
+      border-top-color: #202429;
+    }
+
+    .pdf-offer-button:hover .pdf-tooltip,
+    .pdf-offer-button:focus-visible .pdf-tooltip {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    @keyframes pdf-spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .price-label {
+      display: block;
+      margin-bottom: 5px;
+      color: #777e86;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .price-base {
+      display: block;
+      font-size: 20px;
+      font-weight: 780;
+      line-height: 1.2;
+      letter-spacing: -0.025em;
+    }
+
+
+    /* =======================================================
+       EKRAN STARTOWY I NAWIGACJA PRODUKTÓW
+       ======================================================= */
+    .product-start {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(180px, 280px));
+      place-content: center;
+      gap: 22px;
+      padding: 24px;
+      background: #eef1f4;
+      transition: opacity 180ms ease, visibility 180ms ease;
+    }
+
+    .product-choice {
+      min-height: 150px;
+      padding: 24px;
+      border: 1px solid rgba(26, 31, 37, 0.10);
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.94);
+      color: var(--ink);
+      box-shadow:
+        0 24px 70px rgba(26, 30, 35, 0.12),
+        0 4px 16px rgba(26, 30, 35, 0.05);
+      font: inherit;
+      font-size: clamp(24px, 3vw, 34px);
+      font-weight: 780;
+      letter-spacing: -0.03em;
+      cursor: pointer;
+      transition:
+        transform 170ms ease,
+        border-color 170ms ease,
+        box-shadow 170ms ease,
+        background 170ms ease;
+    }
+
+    .product-choice:hover,
+    .product-choice:focus-visible {
+      transform: translateY(-3px);
+      border-color: rgba(47, 143, 91, 0.48);
+      background: linear-gradient(145deg, #ffffff, #edf8f1);
+      box-shadow:
+        0 30px 80px rgba(26, 30, 35, 0.16),
+        0 8px 24px rgba(47, 143, 91, 0.10);
+      outline: none;
+    }
+
+    body:not(.route-start) .product-start {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    body.route-start #app,
+    body.route-start .config-panel,
+    body.route-start .price-card,
+    body.route-start .product-back-button {
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    body.route-start .price-card {
+      display: none;
+    }
+
+    .product-back-button {
+      position: fixed;
+      z-index: 45;
+      top: 18px;
+      left: calc(var(--panel-width) + 32px);
+      min-height: 42px;
+      padding: 0 15px;
+      border: 1px solid rgba(255, 255, 255, 0.76);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.90);
+      color: var(--ink);
+      box-shadow: 0 10px 28px rgba(26, 30, 35, 0.10);
+      font: inherit;
+      font-size: 13px;
+      font-weight: 740;
+      cursor: pointer;
+      backdrop-filter: blur(14px) saturate(120%);
+      -webkit-backdrop-filter: blur(14px) saturate(120%);
+      transition: transform 150ms ease, border-color 150ms ease;
+    }
+
+    .product-back-button:hover,
+    .product-back-button:focus-visible {
+      transform: translateY(-1px);
+      border-color: rgba(47, 143, 91, 0.45);
+      outline: none;
+    }
+
+    body.route-desk [data-product-ui="wardrobe"],
+    body.route-wardrobe [data-product-ui="desk"] {
+      display: none !important;
+    }
+
+    body.route-wardrobe .wardrobe-config-panel {
+      display: block;
+    }
+
+    @media (max-width: 760px) {
+      :root {
+        --panel-width: calc(100vw - 24px);
+        --mobile-viewer-height: clamp(280px, 42svh, 390px);
+      }
+
+
+      .product-start {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
+        padding: 18px;
+      }
+
+      .product-choice {
+        width: min(100%, 360px);
+        min-height: 120px;
+        justify-self: center;
+        border-radius: 20px;
+        font-size: 27px;
+      }
+
+      .product-back-button {
+        top: 12px;
+        left: 12px;
+        min-height: 38px;
+        padding: 0 12px;
+      }
+
+      body.route-start {
+        height: 100%;
+        min-height: 100%;
+        overflow: hidden;
+      }
+
+      html,
+      body {
+        height: auto;
+        min-height: 100%;
+        overflow-x: hidden;
+        overflow-y: visible;
+      }
+
+      /*
+       * Na telefonie podgląd jest naprawdę stały (fixed), a nie sticky.
+       * Dzięki temu Safari nie wypuszcza go poza ekran podczas długiego
+       * przewijania panelu konfiguracji.
+       */
+      #app {
+        position: fixed;
+        inset: 0 0 auto 0;
+        z-index: 20;
+        width: 100%;
+        height: var(--mobile-viewer-height);
+        overflow: hidden;
+        background: #eef1f4;
+        box-shadow: 0 12px 30px rgba(26, 30, 35, 0.10);
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+        will-change: transform;
+      }
+
+      #app canvas {
+        width: 100% !important;
+        height: 100% !important;
+      }
+
+      .config-panel {
+        position: relative;
+        z-index: 10;
+        top: auto;
+        left: auto;
+        width: calc(100% - 24px);
+        max-height: none;
+        margin: calc(var(--mobile-viewer-height) + 12px) auto 0;
+        padding: 16px;
+        overflow: visible;
+        border-radius: 17px;
+      }
+
+      .size-option,
+      .side-option { min-height: 52px; }
+
+      body.route-wardrobe .wardrobe-config-panel {
+        margin-bottom: 18px;
+      }
+
+      .price-card {
+        position: relative;
+        right: auto;
+        bottom: auto;
+        width: calc(100% - 24px);
+        min-width: 0;
+        margin: 12px auto 18px;
+        padding: 14px 16px;
+        align-items: center;
+        border-radius: 16px;
+      }
+
+      .pdf-tooltip {
+        left: 50%;
+        transform: translate(-50%, 4px);
+      }
+
+      .pdf-offer-button:hover .pdf-tooltip,
+      .pdf-offer-button:focus-visible .pdf-tooltip {
+        transform: translate(-50%, 0);
+      }
+    }
+  </style>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.166.1/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.166.1/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body class="route-start">
+  <main class="product-start" id="product-start" aria-label="Wybierz produkt">
+    <button class="product-choice" type="button" data-product-route="desk">Biurko</button>
+    <button class="product-choice" type="button" data-product-route="wardrobe">Szafa</button>
+  </main>
+
+  <button class="product-back-button" id="product-back-button" type="button" aria-label="Wróć do wyboru produktu">← Produkty</button>
+
+  <div id="app"></div>
+
+  <aside class="config-panel" data-product-ui="desk" aria-label="Konfiguracja biurka">
+    <section class="config-section" aria-labelledby="size-title">
+      <h2 class="panel-title" id="size-title">Rozmiar</h2>
+      <div class="size-options" role="radiogroup" aria-label="Rozmiar biurka">
+        <button class="size-option is-active" type="button" data-width="140" role="radio" aria-checked="true">
+          <span>
+            <span class="size-main">140 × 80 × 74 cm</span>
+          </span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+
+        <button class="size-option" type="button" data-width="160" role="radio" aria-checked="false">
+          <span>
+            <span class="size-main">160 × 80 × 74 cm</span>
+            <span class="size-extra">+ 64,82 zł</span>
+          </span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+
+        <button class="size-option" type="button" data-width="180" role="radio" aria-checked="false">
+          <span>
+            <span class="size-main">180 × 80 × 74 cm</span>
+            <span class="size-extra">+ 127,55 zł</span>
+          </span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+      </div>
+    </section>
+
+    <section class="config-section" aria-labelledby="helper-side-title">
+      <h2 class="panel-title" id="helper-side-title">Pomocnik – strona</h2>
+      <div class="side-options" role="radiogroup" aria-label="Strona pomocnika">
+        <button class="side-option is-active" type="button" data-side="left" role="radio" aria-checked="true">
+          <span class="size-main">Lewa</span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+
+        <button class="side-option" type="button" data-side="right" role="radio" aria-checked="false">
+          <span class="size-main">Prawa</span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+      </div>
+    </section>
+
+    <section class="config-section" aria-labelledby="top-band-title">
+      <h2 class="panel-title" id="top-band-title">Opaska blatu</h2>
+      <div class="side-options" role="radiogroup" aria-label="Opaska blatu">
+        <button class="side-option band-option is-active" type="button" data-band="off" role="radio" aria-checked="true">
+          <span class="size-main">Nie</span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+
+        <button class="side-option band-option" type="button" data-band="on" role="radio" aria-checked="false">
+          <span>
+            <span class="size-main">Tak</span>
+            <span class="size-extra" id="band-surcharge">+ 12,55 zł</span>
+          </span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+      </div>
+    </section>
+
+    <section class="config-section" aria-labelledby="top-finish-title">
+      <h2 class="panel-title" id="top-finish-title">Blat</h2>
+      <div class="finish-options" role="radiogroup" aria-label="Kolor blatu">
+        <button class="finish-option is-active" type="button" data-finish-target="top" data-finish="white" role="radio" aria-checked="true">
+          <span class="finish-preview" style="background-image: url('./finish-white.jpg')"></span>
+          <span class="finish-label">White <span class="finish-check" aria-hidden="true"></span></span>
+        </button>
+        <button class="finish-option" type="button" data-finish-target="top" data-finish="beige" role="radio" aria-checked="false">
+          <span class="finish-preview" style="background-image: url('./finish-beige.jpg')"></span>
+          <span class="finish-label">Beige <span class="finish-check" aria-hidden="true"></span></span>
+        </button>
+        <button class="finish-option" type="button" data-finish-target="top" data-finish="chocolate" role="radio" aria-checked="false">
+          <span class="finish-preview" style="background-image: url('./finish-chocolate.jpg')"></span>
+          <span class="finish-label">Chocolate <span class="finish-check" aria-hidden="true"></span></span>
+        </button>
+      </div>
+    </section>
+
+    <section class="config-section" aria-labelledby="helper-finish-title">
+      <h2 class="panel-title" id="helper-finish-title">Pomocnik</h2>
+      <div class="finish-options" role="radiogroup" aria-label="Kolor pomocnika">
+        <button class="finish-option is-active" type="button" data-finish-target="helper" data-finish="white" role="radio" aria-checked="true">
+          <span class="finish-preview" style="background-image: url('./finish-white.jpg')"></span>
+          <span class="finish-label">White <span class="finish-check" aria-hidden="true"></span></span>
+        </button>
+        <button class="finish-option" type="button" data-finish-target="helper" data-finish="beige" role="radio" aria-checked="false">
+          <span class="finish-preview" style="background-image: url('./finish-beige.jpg')"></span>
+          <span class="finish-label">Beige <span class="finish-check" aria-hidden="true"></span></span>
+        </button>
+        <button class="finish-option" type="button" data-finish-target="helper" data-finish="chocolate" role="radio" aria-checked="false">
+          <span class="finish-preview" style="background-image: url('./finish-chocolate.jpg')"></span>
+          <span class="finish-label">Chocolate <span class="finish-check" aria-hidden="true"></span></span>
+        </button>
+      </div>
+    </section>
+
+    <section class="config-section" aria-labelledby="frame-finish-title">
+      <h2 class="panel-title" id="frame-finish-title">Stelaż</h2>
+      <div class="side-options" role="radiogroup" aria-label="Kolor stelaża">
+        <button class="side-option frame-option is-active" type="button" data-frame-finish="black" role="radio" aria-checked="true">
+          <span class="size-main">Czarny</span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+        <button class="side-option frame-option" type="button" data-frame-finish="white" role="radio" aria-checked="false">
+          <span class="size-main">Biały</span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+      </div>
+    </section>
+
+    <section class="config-section" aria-labelledby="cable-grommet-title">
+      <h2 class="panel-title" id="cable-grommet-title">Przepust kablowy</h2>
+      <div class="side-options" role="radiogroup" aria-label="Przepust kablowy">
+        <button class="side-option cable-option is-active" type="button" data-cable-grommet="off" role="radio" aria-checked="true">
+          <span class="size-main">Nie</span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+        <button class="side-option cable-option" type="button" data-cable-grommet="on" role="radio" aria-checked="false">
+          <span>
+            <span class="size-main">Tak</span>
+            <span class="size-extra">+ 58,89 zł</span>
+          </span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+      </div>
+    </section>
+  </aside>
+
+  <aside class="config-panel wardrobe-config-panel" data-product-ui="wardrobe" aria-label="Konfiguracja szafy">
+    <section class="config-section" aria-labelledby="wardrobe-size-title">
+      <h2 class="panel-title" id="wardrobe-size-title">Rozmiar</h2>
+      <div class="wardrobe-size-card" aria-label="Rozmiar szafy 40 na 40 na 189 centymetrów">
+        <span class="size-main">40 × 40 × 189 cm</span>
+        <span class="option-check" aria-hidden="true"></span>
+      </div>
+    </section>
+
+    <section class="config-section" aria-labelledby="wardrobe-back-title">
+      <h2 class="panel-title" id="wardrobe-back-title">Plecy</h2>
+      <div class="size-options" role="radiogroup" aria-label="Materiał pleców szafy">
+        <button class="side-option wardrobe-back-option is-active" type="button" data-wardrobe-back="hdf" role="radio" aria-checked="true">
+          <span class="size-main">Płyta HDF 3 mm</span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+        <button class="side-option wardrobe-back-option" type="button" data-wardrobe-back="melamine" role="radio" aria-checked="false">
+          <span>
+            <span class="size-main">Płyta melaminowana 18 mm</span>
+            <span class="size-extra">+ 200,00 zł</span>
+          </span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+      </div>
+    </section>
+
+    <section class="config-section" aria-labelledby="wardrobe-finish-title">
+      <h2 class="panel-title" id="wardrobe-finish-title">Kolor szafy</h2>
+      <div class="finish-options" role="radiogroup" aria-label="Kolor szafy">
+        <button class="finish-option is-active" type="button" data-finish-target="wardrobe" data-finish="white" role="radio" aria-checked="true">
+          <span class="finish-preview" style="background-image: url('./finish-white.jpg')"></span>
+          <span class="finish-label">White <span class="finish-check" aria-hidden="true"></span></span>
+        </button>
+        <button class="finish-option" type="button" data-finish-target="wardrobe" data-finish="beige" role="radio" aria-checked="false">
+          <span class="finish-preview" style="background-image: url('./finish-beige.jpg')"></span>
+          <span class="finish-label">Beige <span class="finish-check" aria-hidden="true"></span></span>
+        </button>
+        <button class="finish-option" type="button" data-finish-target="wardrobe" data-finish="chocolate" role="radio" aria-checked="false">
+          <span class="finish-preview" style="background-image: url('./finish-chocolate.jpg')"></span>
+          <span class="finish-label">Chocolate <span class="finish-check" aria-hidden="true"></span></span>
+        </button>
+      </div>
+    </section>
+
+    <section class="config-section" aria-labelledby="wardrobe-handle-title">
+      <h2 class="panel-title" id="wardrobe-handle-title">Kolor uchwytu</h2>
+      <div class="wardrobe-handle-options" role="radiogroup" aria-label="Kolor uchwytu">
+        <button class="side-option wardrobe-handle-option is-active" type="button" data-wardrobe-handle="gray" role="radio" aria-checked="true">
+          <span class="size-main">Szary</span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+        <button class="side-option wardrobe-handle-option" type="button" data-wardrobe-handle="white" role="radio" aria-checked="false">
+          <span class="size-main">Biały</span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+        <button class="side-option wardrobe-handle-option" type="button" data-wardrobe-handle="black" role="radio" aria-checked="false">
+          <span class="size-main">Czarny</span>
+          <span class="option-check" aria-hidden="true"></span>
+        </button>
+      </div>
+    </section>
+  </aside>
+
+  <aside class="price-card" aria-live="polite">
+    <button
+      class="pdf-offer-button"
+      id="generate-offer-pdf"
+      type="button"
+      aria-label="Generuj ofertę PDF"
+      title="Generuj ofertę PDF"
+    >
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M7 3.75h6.2L17.5 8v12.25H7z" stroke-width="1.8" stroke-linejoin="round"/>
+        <path d="M13 3.75V8h4.5M9.5 12h5M9.5 15h5M9.5 18h3.25" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="pdf-tooltip" role="tooltip">Generuj ofertę PDF</span>
+    </button>
+
+    <span class="price-content">
+      <span class="price-label">Cena katalogowa</span>
+      <strong class="price-base" id="catalog-price">2 009,45 zł brutto</strong>
+    </span>
+  </aside>
+
+  <script type="module" src="./main.js?v=20260801-wardrobe-v13"></script>
+</body>
+</html>
