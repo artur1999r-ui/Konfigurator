@@ -469,86 +469,142 @@ function applyWardrobeHandleFinish() {
 }
 
 function updateWardrobeHingeVisibility() {
-  // Zawiasy pojawiają się dopiero po odsunięciu drzwi od korpusu.
-  // Dzięki temu przy zamkniętym froncie są całkowicie niewidoczne,
-  // a w pierwszej fazie animacji nie przenikają przez płytę.
+  // Przy zamkniętym froncie zawiasy są całkowicie schowane.
+  // Pojawiają się dopiero po odsunięciu drzwi od korpusu.
   const doorAngle = wardrobeDoorPivot
     ? Math.abs(wardrobeDoorPivot.rotation.y)
     : 0;
-  const visible = doorAngle > THREE.MathUtils.degToRad(7);
+  const visible = doorAngle > THREE.MathUtils.degToRad(9);
 
   wardrobeHingeParts.forEach((part) => {
     if (part) part.visible = visible;
   });
 }
 
-function addWardrobeHinge(yPosition, hingeAxisX, hingeAxisZ) {
+const wardrobeHingeYAxis = new THREE.Vector3(0, 1, 0);
+const wardrobeHingeStartWorld = new THREE.Vector3();
+const wardrobeHingeEndWorld = new THREE.Vector3();
+const wardrobeHingeStartLocal = new THREE.Vector3();
+const wardrobeHingeEndLocal = new THREE.Vector3();
+const wardrobeHingeDirection = new THREE.Vector3();
+const wardrobeHingeMidpoint = new THREE.Vector3();
+
+function updateWardrobeHingeAssemblies() {
+  if (!wardrobeDoorPivot || wardrobeHingeAssemblies.length === 0) return;
+
+  wardrobeDoorPivot.updateWorldMatrix(true, true);
+  wardrobeBodyGroup.updateWorldMatrix(true, false);
+
+  wardrobeHingeAssemblies.forEach((assembly) => {
+    assembly.fixedJoint.getWorldPosition(wardrobeHingeStartWorld);
+    assembly.movingJoint.getWorldPosition(wardrobeHingeEndWorld);
+
+    wardrobeHingeStartLocal
+      .copy(wardrobeHingeStartWorld);
+    wardrobeBodyGroup.worldToLocal(wardrobeHingeStartLocal);
+
+    wardrobeHingeEndLocal
+      .copy(wardrobeHingeEndWorld);
+    wardrobeBodyGroup.worldToLocal(wardrobeHingeEndLocal);
+
+    wardrobeHingeDirection.subVectors(
+      wardrobeHingeEndLocal,
+      wardrobeHingeStartLocal
+    );
+
+    const length = Math.max(0.01, wardrobeHingeDirection.length());
+    wardrobeHingeMidpoint
+      .copy(wardrobeHingeStartLocal)
+      .add(wardrobeHingeEndLocal)
+      .multiplyScalar(0.5);
+
+    assembly.connector.position.copy(wardrobeHingeMidpoint);
+    assembly.connector.quaternion.setFromUnitVectors(
+      wardrobeHingeYAxis,
+      wardrobeHingeDirection.normalize()
+    );
+    assembly.connector.scale.set(1, length, 1);
+  });
+}
+
+function addWardrobeHinge(yPosition) {
   if (!wardrobeDoorPivot) return;
 
-  // Prosty zawias meblowy z jedną wspólną osią:
-  // - nieruchome skrzydełko jest przymocowane do boku szafy,
-  // - ruchome skrzydełko obraca się razem z drzwiami,
-  // - oba elementy spotykają się dokładnie na wspólnym trzpieniu.
+  // Najprostszy poprawny zawias meblowy:
+  // dwie płytki połączone jednym ramieniem. Ramię jest aktualizowane
+  // w każdej klatce, więc zawsze styka się z obydwoma częściami zawiasu.
   const fixedRoot = new THREE.Group();
-  fixedRoot.name = 'Zawias prosty — część korpusu';
-  fixedRoot.position.set(hingeAxisX, yPosition, hingeAxisZ);
-
-  const pin = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.32, 0.32, 4.8, 20),
-    wardrobeHingeAccentMaterial
+  fixedRoot.name = 'Zawias — mocowanie do korpusu';
+  fixedRoot.position.set(
+    -WARDROBE_WIDTH / 2 + WARDROBE_BOARD + 0.25,
+    yPosition,
+    WARDROBE_DEPTH / 2 - WARDROBE_BOARD - 1.55
   );
-  pin.name = 'Trzpień zawiasu';
-  pin.castShadow = true;
-  pin.receiveShadow = true;
-  fixedRoot.add(pin);
 
   const fixedLeaf = new THREE.Mesh(
-    new THREE.BoxGeometry(0.16, 4.2, 2.1),
+    new THREE.BoxGeometry(0.16, 4.2, 2.4),
     wardrobeHingeMaterial
   );
-  fixedLeaf.name = 'Skrzydełko zawiasu — korpus';
-  fixedLeaf.position.set(0.92, 0, -1.05);
+  fixedLeaf.name = 'Płytka zawiasu — korpus';
   fixedLeaf.castShadow = true;
   fixedLeaf.receiveShadow = true;
   fixedRoot.add(fixedLeaf);
 
-  const fixedBridge = new THREE.Mesh(
-    new THREE.BoxGeometry(1.25, 0.82, 0.62),
-    wardrobeHingeMaterial
+  const fixedJoint = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.34, 0.34, 1.35, 18),
+    wardrobeHingeAccentMaterial
   );
-  fixedBridge.position.set(0.62, 0, -0.30);
-  fixedBridge.castShadow = true;
-  fixedBridge.receiveShadow = true;
-  fixedRoot.add(fixedBridge);
+  fixedJoint.name = 'Przegub zawiasu — korpus';
+  fixedJoint.position.set(0.42, 0, 0.66);
+  fixedJoint.castShadow = true;
+  fixedJoint.receiveShadow = true;
+  fixedRoot.add(fixedJoint);
 
   wardrobeBodyGroup.add(fixedRoot);
-  wardrobeHingeParts.push(fixedRoot);
 
   const movingRoot = new THREE.Group();
-  movingRoot.name = 'Zawias prosty — część drzwiowa';
-  movingRoot.position.set(0, yPosition, 0);
+  movingRoot.name = 'Zawias — mocowanie do drzwi';
+  movingRoot.position.set(1.65, yPosition, 0.01);
 
   const movingLeaf = new THREE.Mesh(
-    new THREE.BoxGeometry(2.2, 4.2, 0.16),
+    new THREE.BoxGeometry(2.7, 4.2, 0.16),
     wardrobeHingeMaterial
   );
-  movingLeaf.name = 'Skrzydełko zawiasu — drzwi';
-  movingLeaf.position.set(1.10, 0, 0.08);
+  movingLeaf.name = 'Płytka zawiasu — drzwi';
+  movingLeaf.position.set(0.75, 0, 0);
   movingLeaf.castShadow = true;
   movingLeaf.receiveShadow = true;
   movingRoot.add(movingLeaf);
 
-  const movingBridge = new THREE.Mesh(
-    new THREE.BoxGeometry(0.72, 0.82, 0.72),
-    wardrobeHingeMaterial
+  const movingJoint = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.34, 0.34, 1.35, 18),
+    wardrobeHingeAccentMaterial
   );
-  movingBridge.position.set(0.34, 0, 0.08);
-  movingBridge.castShadow = true;
-  movingBridge.receiveShadow = true;
-  movingRoot.add(movingBridge);
+  movingJoint.name = 'Przegub zawiasu — drzwi';
+  movingJoint.position.set(-0.48, 0, -0.02);
+  movingJoint.castShadow = true;
+  movingJoint.receiveShadow = true;
+  movingRoot.add(movingJoint);
 
   wardrobeDoorPivot.add(movingRoot);
-  wardrobeHingeParts.push(movingRoot);
+
+  const connector = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.29, 0.29, 1, 16),
+    wardrobeHingeMaterial
+  );
+  connector.name = 'Wspólne ramię zawiasu';
+  connector.castShadow = true;
+  connector.receiveShadow = true;
+  wardrobeBodyGroup.add(connector);
+
+  wardrobeHingeParts.push(fixedRoot, movingRoot, connector);
+  wardrobeHingeAssemblies.push({
+    fixedJoint,
+    movingJoint,
+    connector
+  });
+
+  updateWardrobeHingeAssemblies();
 }
 
 function buildWardrobeModel() {
@@ -683,7 +739,7 @@ function buildWardrobeModel() {
 
   const hingeOffsets = [26, WARDROBE_HEIGHT / 2, WARDROBE_HEIGHT - 26];
   hingeOffsets.slice(0, WARDROBE_HINGE_COUNT).forEach((hingeY) => {
-    addWardrobeHinge(hingeY, hingeAxisX, hingeAxisZ);
+    addWardrobeHinge(hingeY);
   });
 
   rebuildWardrobeBack();
@@ -3330,6 +3386,7 @@ function animate(now = 0) {
     const targetDoorRotation = wardrobeDoorOpen ? -WARDROBE_HINGE_OPEN_ANGLE : 0;
     wardrobeDoorPivot.rotation.y +=
       (targetDoorRotation - wardrobeDoorPivot.rotation.y) * 0.14;
+    updateWardrobeHingeAssemblies();
     updateWardrobeHingeVisibility();
   }
 
