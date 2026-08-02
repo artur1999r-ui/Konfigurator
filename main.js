@@ -393,6 +393,7 @@ wardrobeModel.add(wardrobeBackGroup);
 let wardrobeDoorPivot = null;
 let wardrobeHandleMesh = null;
 let wardrobeHandleHitMesh = null;
+let wardrobeHingeParts = [];
 
 function addBoard({ name, size, position, parent = model, materials = boardMaterials }) {
   const geometry = new THREE.BoxGeometry(size.x, size.y, size.z);
@@ -466,82 +467,111 @@ function applyWardrobeHandleFinish() {
   wardrobeHandleMesh.material.needsUpdate = true;
 }
 
+function updateWardrobeHingeVisibility() {
+  const visible =
+    wardrobeDoorOpen ||
+    (wardrobeDoorPivot && Math.abs(wardrobeDoorPivot.rotation.y) > 0.03);
+
+  wardrobeHingeParts.forEach((part) => {
+    if (part) part.visible = Boolean(visible);
+  });
+}
+
 function addWardrobeHinge(yPosition) {
   if (!wardrobeDoorPivot) return;
 
-  const bodyInnerX = -WARDROBE_WIDTH / 2 + WARDROBE_BOARD;
-  const bodyMountZ = WARDROBE_DEPTH / 2 - WARDROBE_BOARD - 2.2;
+  const bodyMountX = -WARDROBE_WIDTH / 2 + WARDROBE_BOARD / 2 + 0.04;
+  const bodyMountZ = WARDROBE_DEPTH / 2 - WARDROBE_BOARD - 2.5;
+
+  const bodyGroup = new THREE.Group();
+  bodyGroup.name = 'Zawias szafy - część korpusu';
+  bodyGroup.position.set(bodyMountX, yPosition, bodyMountZ);
 
   const bodyPlate = new THREE.Mesh(
-    new THREE.BoxGeometry(0.22, 5.0, 2.9),
+    new THREE.BoxGeometry(0.18, 5.0, 3.0),
     wardrobeHingeMaterial
   );
-  bodyPlate.name = 'Płytka montażowa zawiasu';
-  bodyPlate.position.set(bodyInnerX + 0.11, yPosition, bodyMountZ);
   bodyPlate.castShadow = true;
   bodyPlate.receiveShadow = true;
-  wardrobeBodyGroup.add(bodyPlate);
+  bodyGroup.add(bodyPlate);
 
-  const bodyPlateSpacer = new THREE.Mesh(
-    new THREE.BoxGeometry(0.82, 2.4, 1.2),
+  const bodyBlock = new THREE.Mesh(
+    new THREE.BoxGeometry(0.95, 1.7, 2.0),
     wardrobeHingeAccentMaterial
   );
-  bodyPlateSpacer.position.set(bodyInnerX + 0.52, yPosition, bodyMountZ);
-  bodyPlateSpacer.castShadow = true;
-  bodyPlateSpacer.receiveShadow = true;
-  wardrobeBodyGroup.add(bodyPlateSpacer);
+  bodyBlock.position.set(0.56, 0, -0.15);
+  bodyBlock.castShadow = true;
+  bodyBlock.receiveShadow = true;
+  bodyGroup.add(bodyBlock);
 
-  const doorCupPlate = new THREE.Mesh(
-    new THREE.BoxGeometry(3.4, 5.0, 0.18),
+  const armBase = new THREE.Mesh(
+    new THREE.BoxGeometry(1.8, 0.85, 0.85),
     wardrobeHingeMaterial
   );
-  doorCupPlate.name = 'Płytka drzwiowa zawiasu';
-  doorCupPlate.position.set(2.7, yPosition, -0.8);
-  doorCupPlate.castShadow = true;
-  doorCupPlate.receiveShadow = true;
-  wardrobeDoorPivot.add(doorCupPlate);
+  armBase.position.set(1.7, 0, -0.65);
+  armBase.castShadow = true;
+  armBase.receiveShadow = true;
+  bodyGroup.add(armBase);
 
-  const cupGeometry = new THREE.CylinderGeometry(1.75, 1.75, 0.72, 24);
+  const bodyPivot = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.22, 0.22, 1.4, 18),
+    wardrobeHingeAccentMaterial
+  );
+  bodyPivot.rotation.z = Math.PI / 2;
+  bodyPivot.position.set(0.78, 0, -0.48);
+  bodyPivot.castShadow = true;
+  bodyPivot.receiveShadow = true;
+  bodyGroup.add(bodyPivot);
+
+  wardrobeBodyGroup.add(bodyGroup);
+  wardrobeHingeParts.push(bodyGroup);
+
+  const doorGroup = new THREE.Group();
+  doorGroup.name = 'Zawias szafy - część drzwiowa';
+  doorGroup.position.set(2.3, yPosition, -1.6);
+
+  const cupPlate = new THREE.Mesh(
+    new THREE.BoxGeometry(3.0, 5.0, 0.16),
+    wardrobeHingeMaterial
+  );
+  cupPlate.castShadow = true;
+  cupPlate.receiveShadow = true;
+  doorGroup.add(cupPlate);
+
+  const cupGeometry = new THREE.CylinderGeometry(1.7, 1.7, 0.62, 24);
   cupGeometry.rotateX(Math.PI / 2);
   const hingeCup = new THREE.Mesh(cupGeometry, wardrobeHingeMaterial);
-  hingeCup.name = 'Puszka zawiasu 35 mm';
-  hingeCup.position.set(2.45, yPosition, -0.5);
+  hingeCup.position.set(-0.18, 0, 0.33);
   hingeCup.castShadow = true;
   hingeCup.receiveShadow = true;
-  wardrobeDoorPivot.add(hingeCup);
+  doorGroup.add(hingeCup);
 
-  const hingeArm = new THREE.Mesh(
-    new THREE.BoxGeometry(4.6, 1.05, 1.05),
+  const doorArm = new THREE.Mesh(
+    new THREE.BoxGeometry(2.5, 0.85, 0.85),
     wardrobeHingeMaterial
   );
-  hingeArm.name = 'Ramię zawiasu';
-  hingeArm.position.set(0.6, yPosition, -0.16);
-  hingeArm.castShadow = true;
-  hingeArm.receiveShadow = true;
-  wardrobeDoorPivot.add(hingeArm);
+  doorArm.position.set(-2.35, 0, 0.08);
+  doorArm.castShadow = true;
+  doorArm.receiveShadow = true;
+  doorGroup.add(doorArm);
 
-  const hingeNeck = new THREE.Mesh(
-    new THREE.BoxGeometry(1.2, 2.4, 0.92),
+  const doorJoint = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.22, 0.22, 1.2, 18),
     wardrobeHingeAccentMaterial
   );
-  hingeNeck.position.set(-1.15, yPosition, -0.16);
-  hingeNeck.castShadow = true;
-  hingeNeck.receiveShadow = true;
-  wardrobeDoorPivot.add(hingeNeck);
+  doorJoint.rotation.z = Math.PI / 2;
+  doorJoint.position.set(-1.2, 0, -0.06);
+  doorJoint.castShadow = true;
+  doorJoint.receiveShadow = true;
+  doorGroup.add(doorJoint);
 
-  const hingePivot = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.28, 0.28, 2.2, 18),
-    wardrobeHingeAccentMaterial
-  );
-  hingePivot.rotation.z = Math.PI / 2;
-  hingePivot.position.set(-0.62, yPosition, -0.16);
-  hingePivot.castShadow = true;
-  hingePivot.receiveShadow = true;
-  wardrobeDoorPivot.add(hingePivot);
+  wardrobeDoorPivot.add(doorGroup);
+  wardrobeHingeParts.push(doorGroup);
 }
 
 function buildWardrobeModel() {
   clearGeneratedGroup(wardrobeBodyGroup);
+  wardrobeHingeParts = [];
 
   // Korpus kończy się 18 mm przed frontem. Front uzupełnia nominalną
   // głębokość szafy do 40 cm.
@@ -671,6 +701,7 @@ function buildWardrobeModel() {
 
   rebuildWardrobeBack();
   applyWardrobeHandleFinish();
+  updateWardrobeHingeVisibility();
 }
 
 buildWardrobeModel();
@@ -3312,6 +3343,7 @@ function animate(now = 0) {
     const targetDoorRotation = wardrobeDoorOpen ? -WARDROBE_HINGE_OPEN_ANGLE : 0;
     wardrobeDoorPivot.rotation.y +=
       (targetDoorRotation - wardrobeDoorPivot.rotation.y) * 0.14;
+    updateWardrobeHingeVisibility();
   }
 
   if (cableGrommetFlapPivot) {
